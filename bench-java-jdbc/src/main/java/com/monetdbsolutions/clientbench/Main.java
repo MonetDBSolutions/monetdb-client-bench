@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Main {
 
@@ -16,7 +17,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		String dbUrl = null;
 		String queryFile = null;
-		Double duration = null;
+		Double durationArg = null;
 
 		switch (args.length) {
 			default:
@@ -24,7 +25,7 @@ public class Main {
 				System.exit(1);
 				return;
 			case 3:
-				duration = Double.parseDouble(args[2]);
+				durationArg = Double.parseDouble(args[2]);
 				/* fallthrough */
 			case 2:
 				queryFile = args[1];
@@ -43,9 +44,38 @@ public class Main {
 		}
 		Benchmark benchmark = new Benchmark(Path.of(queryFile));
 
+		final double duration;
+		if (durationArg == null) {
+			throw new RuntimeException("Duration must be specified");
+		}
+		duration = durationArg;
+
+		AtomicBoolean success = new AtomicBoolean(true);
 		try (ResultWriter writer = new ResultWriter(System.out)) {
-			Runner runner = new Runner(dbUrl, benchmark, writer);
+			int n = benchmark.getParallelism();
+			Thread[] threads = new Thread[n];
+			for (int i = 0; i < n; i++) {
+				{
+					Runner runner = new Runner(dbUrl, benchmark, writer);
+					Thread worker = new Thread(() -> doWork(runner, duration, success));
+					worker.start();
+					threads[i] = worker;
+				}
+			}
+			for (int i = 0; i < n; i++) {
+				threads[i].join();
+			}
+		}
+
+		System.exit(success.get() ? 0 : 1);
+	}
+
+	private static void doWork(Runner runner, double duration, AtomicBoolean success) {
+		try {
 			runner.run(duration);
+		} catch (Exception e) {
+			success.set(false);
+			e.printStackTrace();
 		}
 	}
 

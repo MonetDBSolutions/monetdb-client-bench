@@ -4,17 +4,47 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Benchmark {
+	private static final Pattern keywordPattern = Pattern.compile("@([A-Za-z0-9]+)(?:=([0-9]+))?@");
 	private final String query;
-	private final boolean allText;
-	private final boolean reconnect;
+	private boolean allText;
+	private boolean reconnect;
+
+	private int parallelism = 1;
 
 	public Benchmark(Path queryFile) throws IOException {
 		List<String> lines = Files.readAllLines(queryFile);
 		query = String.join("\n", lines);
-		allText = query.contains("@ALL_TEXT@");
-		reconnect = query.contains("@RECONNECT");
+		parse_keywords();
+	}
+
+	private void parse_keywords() {
+		Matcher matcher = keywordPattern.matcher(query);
+		while (matcher.find()) {
+			String name = matcher.group(1);
+			String value = matcher.group(2);
+			switch (name) {
+				case "ALL_TEXT":
+					allText = true;
+					break;
+				case "RECONNECT":
+					reconnect = true;
+					break;
+				case "PARALLEL":
+					if (value != null) {
+						parallelism = Integer.parseInt(value);
+					} else {
+						throw new RuntimeException("Invalid keyword in sql query, need @PARALLEL=number@");
+					}
+					break;
+				default:
+					throw new RuntimeException("Invalid keyword in sql query: " + name);
+			}
+		}
+
 	}
 
 	public String getQuery() {
@@ -27,5 +57,9 @@ public class Benchmark {
 
 	public boolean alwaysReconnect() {
 		return reconnect;
+	}
+
+	public int getParallelism() {
+		return parallelism;
 	}
 }
