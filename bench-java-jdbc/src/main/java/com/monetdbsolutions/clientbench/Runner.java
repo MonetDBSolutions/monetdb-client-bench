@@ -2,6 +2,7 @@ package com.monetdbsolutions.clientbench;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -14,7 +15,9 @@ public class Runner {
 	private final String dbUrl;
 	private final Benchmark benchmark;
 	private final ResultWriter writer;
+	Connection _conn = null;
 	private Statement _statement = null;
+	private PreparedStatement _prepared = null;
 	private long count;
 	private ArrayList<ColumnKind> columns;
 
@@ -24,21 +27,48 @@ public class Runner {
 		this.writer = writer;
 	}
 
+	private Connection getConnection() throws SQLException {
+		if (_conn == null) {
+			_conn = DriverManager.getConnection(dbUrl);
+		}
+		return _conn;
+	}
+
 	private Statement getStatement() throws SQLException {
 		if (_statement == null) {
-			Connection conn = DriverManager.getConnection(dbUrl);
-			_statement = conn.createStatement();
+			_statement = getConnection().createStatement();
 		}
 		return _statement;
 	}
 
+	private PreparedStatement getPreparedStatement() throws SQLException {
+		if (_prepared == null) {
+			_prepared = getConnection().prepareStatement(benchmark.getQuery());
+		}
+		return _prepared;
+	}
+
+	private ResultSet executeBenchmarkQuery() throws SQLException {
+		if (benchmark.usePrepareStatement()) {
+			return getPreparedStatement().executeQuery();
+		} else {
+			return getStatement().executeQuery(benchmark.getQuery());
+		}
+	}
+
 	private void disconnect() throws SQLException {
 		if (_statement != null && !_statement.isClosed()) {
-			Connection conn = _statement.getConnection();
 			_statement.close();
-			conn.close();
 		}
 		_statement = null;
+		if (_prepared != null && !_prepared.isClosed()) {
+			_prepared.close();
+		}
+		_prepared = null;
+		if (_conn != null && !_conn.isClosed()) {
+			_conn.close();
+		}
+		_conn = null;
 	}
 
 	public void run(Double duration) throws SQLException {
@@ -79,7 +109,7 @@ public class Runner {
 							disconnect();
 						}
 						long t0 = System.nanoTime();
-						rs = getStatement().executeQuery(benchmark.getQuery());
+						rs = executeBenchmarkQuery();
 						handleResultSet(rs);
 						long t1 = System.nanoTime();
 						submitter.submit((double) (t1 - t0) / 1.0e9);

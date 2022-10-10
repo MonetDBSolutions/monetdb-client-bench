@@ -12,6 +12,7 @@ public class Benchmark {
 	private final String query;
 	private boolean allText;
 	private boolean reconnect;
+	private boolean prepare;
 
 	private int parallelism = 1;
 
@@ -40,6 +41,9 @@ public class Benchmark {
 						throw new RuntimeException("Invalid keyword in sql query, need @PARALLEL=number@");
 					}
 					break;
+				case "PREPARE":
+					prepare = true;
+					break;
 				default:
 					throw new RuntimeException("Invalid keyword in sql query: " + name);
 			}
@@ -61,5 +65,9 @@ public class Benchmark {
 
 	public int getParallelism() {
 		return parallelism;
+	}
+
+	public boolean usePrepareStatement() {
+		return prepare;
 	}
 }
