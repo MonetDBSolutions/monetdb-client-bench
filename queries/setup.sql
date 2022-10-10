@@ -13,6 +13,6 @@ FROM
 
 CREATE TABLE very_tall
 AS SELECT i, t
-FROM tall, sys.generate_series(0, 4);
+FROM tall, sys.generate_series(0, 5);
 
 COMMIT;
