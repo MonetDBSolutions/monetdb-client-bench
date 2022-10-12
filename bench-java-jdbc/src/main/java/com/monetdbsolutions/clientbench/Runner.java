@@ -120,7 +120,7 @@ public class Runner {
 						if (expected != null && count != expected) {
 							throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + count);
 						}
-						submitter.submit((double) (t1 - t0) / 1.0e9);
+						submitter.submit(t1 - t0);
 					}
 				}
 				getStatement().execute("SELECT " + count);

@@ -77,7 +77,8 @@ public class ResultWriter implements AutoCloseable {
 				break;
 			}
 			for (int i = 0; i < batch.n; i++) {
-				printer.println(batch.items[i]);
+				long nanos = batch.durations[i];
+				printer.println(nanos);
 			}
 		}
 
@@ -97,20 +98,20 @@ public class ResultWriter implements AutoCloseable {
 	}
 
 	private static class Batch {
-		final double[] items;
+		final long[] durations;
 		int n;
 
 		Batch() {
 			n = 0;
-			items = new double[1000];
+			durations = new long[1000];
 		}
 
 		boolean isFull() {
-			return n == items.length;
+			return n == durations.length;
 		}
 
-		public void add(double d) {
-			items[n] = d;
+		public void add(long nanos) {
+			durations[n] = nanos;
 			n++;
 		}
 	}
@@ -122,8 +123,8 @@ public class ResultWriter implements AutoCloseable {
 			batch = new Batch();
 		}
 
-		public void submit(double d) {
-			batch.add(d);
+		public void submit(long nanos) {
+			batch.add(nanos);
 			if (batch.isFull()) {
 				flush();
 			}
