@@ -21,7 +21,7 @@ public class Runner {
 	private Statement _statement = null;
 	private PreparedStatement _prepared = null;
 	private long count;
-	private ArrayList<ColumnKind> columns;
+	private ArrayList<ColumnKind> columns = null;
 
 	public Runner(String dbUrl, Benchmark benchmark, int fetchSize, ResultWriter writer) {
 		this.dbUrl = dbUrl;
@@ -77,57 +77,62 @@ public class Runner {
 	}
 
 	public void run(Double duration) throws SQLException {
-		{
-			if (duration == null) {
-				getStatement().execute(benchmark.getQuery());
-			} else {
-				// Warm up and retrieve metadata
-				ResultSet rs = getStatement().executeQuery(benchmark.getQuery());
-				ResultSetMetaData md = rs.getMetaData();
-				columns = new ArrayList<>(md.getColumnCount());
-				for (int i = 1; i <= md.getColumnCount(); i++) {
-					final ColumnKind kind;
-					if (benchmark.alwaysText()) {
-						kind = ColumnKind.StringColumn;
-					} else {
-						int type = md.getColumnType(i);
-						switch (type) {
-							case Types.INTEGER:
-								kind = ColumnKind.IntColumn;
-								break;
-							case Types.VARCHAR:
-								kind = ColumnKind.StringColumn;
-								break;
-							default:
-								throw new RuntimeException(MessageFormat.format("Column {0}({1}) has unknown type {2}", i, md.getColumnName(i), type));
-						}
-					}
-					columns.add(kind);
-				}
-				rs.close();
+		try (ResultWriter.Submitter submitter = writer.newSubmitter()) {
+			// The first time we run we do not collect timing info but we do record the column types.
+			ResultSet rs = executeBenchmarkQuery();
 
-				try (ResultWriter.Submitter submitter = writer.newSubmitter()) {
-					long durationMillis = (long) (1000 * duration);
-					long deadline = System.currentTimeMillis() + durationMillis;
-					Long expected = benchmark.getExpected();
-						if (benchmark.alwaysReconnect()) {
-							disconnect();
-						}
-						long t0 = System.nanoTime();
-						rs = executeBenchmarkQuery();
-						long count = handleResultSet(rs);
-						long t1 = System.nanoTime();
-						if (expected != null && count != expected) {
-							throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + count);
-						}
-						submitter.submit(t1 - t0);
-					}
-				}
-				getStatement().execute("SELECT " + count);
-				disconnect();
+			columns = extractColumnKinds(rs);
+			handleResultSet(rs);
+			rs.close();
+
+			if (duration == null) {
+				return;
 			}
 
+			Long expected = benchmark.getExpected();
+			long deadline = (long)(1000 * duration) + System.currentTimeMillis();
+			do {
+				if (benchmark.alwaysReconnect()) {
+					disconnect();
+				}
+				long t0 = System.nanoTime();
+				rs = executeBenchmarkQuery();
+				long rowCount = handleResultSet(rs);
+				long t1 = System.nanoTime();
+				rs.close();
+				if (expected != null && rowCount != expected) {
+					throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + rowCount);
+				}
+				submitter.submit(t1 - t0);
+			} while (System.currentTimeMillis() < deadline);
+			// deter optimizer
+			getStatement().execute("SELECT " + count);
 		}
+	}
+
+	private ArrayList<ColumnKind> extractColumnKinds(ResultSet rs) throws SQLException {
+		ResultSetMetaData md = rs.getMetaData();
+		ArrayList<ColumnKind> cols = new ArrayList<>(md.getColumnCount());
+		for (int i = 1; i <= md.getColumnCount(); i++) {
+			final ColumnKind kind;
+			if (benchmark.alwaysText()) {
+				kind = ColumnKind.StringColumn;
+			} else {
+				int type = md.getColumnType(i);
+				switch (type) {
+					case Types.INTEGER:
+						kind = ColumnKind.IntColumn;
+						break;
+					case Types.VARCHAR:
+						kind = ColumnKind.StringColumn;
+						break;
+					default:
+						throw new RuntimeException(MessageFormat.format("Column {0}({1}) has unknown type {2}", i, md.getColumnName(i), type));
+				}
+			}
+			cols.add(kind);
+		}
+		return cols;
 	}
 
 	private long handleResultSet(ResultSet rs) throws SQLException {
