@@ -1,4 +1,5 @@
 -- Result set with 10 varchar columns
+-- @EXPECTED=100000@
 
 SELECT
 	i AS col00,

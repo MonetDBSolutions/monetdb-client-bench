@@ -1,5 +1,6 @@
 
 -- @PREPARE@
+-- @EXPECTED=1@
 
 SELECT
     v AS col00001,

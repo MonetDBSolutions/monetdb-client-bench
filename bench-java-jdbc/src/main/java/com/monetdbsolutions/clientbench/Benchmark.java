@@ -15,6 +15,7 @@ public class Benchmark {
 	private boolean prepare;
 
 	private int parallelism = 1;
+	private Long expected = null;
 
 	public Benchmark(Path queryFile) throws IOException {
 		List<String> lines = Files.readAllLines(queryFile);
@@ -44,6 +45,13 @@ public class Benchmark {
 				case "PREPARE":
 					prepare = true;
 					break;
+				case "EXPECTED":
+					if (value != null) {
+						expected = Long.parseLong(value);
+					} else {
+						throw new RuntimeException("Invalid keyword in sql query, need @EXPECTED=number@");
+					}
+					break;
 				default:
 					throw new RuntimeException("Invalid keyword in sql query: " + name);
 			}
@@ -69,5 +77,9 @@ public class Benchmark {
 
 	public boolean usePrepareStatement() {
 		return prepare;
+	}
+
+	public Long getExpected() {
+		return expected;
 	}
 }

@@ -104,14 +104,17 @@ public class Runner {
 				try (ResultWriter.Submitter submitter = writer.newSubmitter()) {
 					long durationMillis = (long) (1000 * duration);
 					long deadline = System.currentTimeMillis() + durationMillis;
-					while (System.currentTimeMillis() < deadline) {
+					Long expected = benchmark.getExpected();
 						if (benchmark.alwaysReconnect()) {
 							disconnect();
 						}
 						long t0 = System.nanoTime();
 						rs = executeBenchmarkQuery();
-						handleResultSet(rs);
+						long count = handleResultSet(rs);
 						long t1 = System.nanoTime();
+						if (expected != null && count != expected) {
+							throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + count);
+						}
 						submitter.submit((double) (t1 - t0) / 1.0e9);
 					}
 				}
@@ -122,7 +125,16 @@ public class Runner {
 		}
 	}
 
-	private void handleResultSet(ResultSet rs) throws SQLException {
+	private long handleResultSet(ResultSet rs) throws SQLException {
+		long count = 0;
+		while (rs.next()) {
+			handleResultRow(rs);
+			count++;
+		}
+		return count;
+	}
+
+	private void handleResultRow(ResultSet rs) throws SQLException {
 		int count = rs.getMetaData().getColumnCount();
 		for (int i = 1; i <= count; i++) {
 			ColumnKind kind = columns.get(i - 1);
