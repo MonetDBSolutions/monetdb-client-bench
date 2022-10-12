@@ -18,14 +18,18 @@ public class Main {
 		String dbUrl = null;
 		String queryFile = null;
 		Double durationArg = null;
+		Integer fetchSizeArg = null;
 
 		switch (args.length) {
 			default:
-				System.err.println("Usage: bench-java-jdbc DB_URL QUERY_FILE DURATION_SECONDS");
+				System.err.println("Usage: bench-java-jdbc DB_URL QUERY_FILE FETCH_SIZE DURATION_SECONDS");
 				System.exit(1);
 				return;
+			case 4:
+				durationArg = Double.parseDouble(args[3]);
+				/* fallthrough */
 			case 3:
-				durationArg = Double.parseDouble(args[2]);
+				fetchSizeArg = Integer.parseInt(args[2]);
 				/* fallthrough */
 			case 2:
 				queryFile = args[1];
@@ -42,13 +46,15 @@ public class Main {
 			showInfo(dbUrl);
 			return;
 		}
-		Benchmark benchmark = new Benchmark(Path.of(queryFile));
 
-		final double duration;
 		if (durationArg == null) {
 			throw new RuntimeException("Duration must be specified");
 		}
-		duration = durationArg;
+
+		// If we get here, all parameters have been given
+		Benchmark benchmark = new Benchmark(Path.of(queryFile));
+		final int fetchSize = fetchSizeArg;
+		final double duration = durationArg;
 
 		AtomicBoolean success = new AtomicBoolean(true);
 		try (ResultWriter writer = new ResultWriter(System.out)) {
@@ -56,7 +62,7 @@ public class Main {
 			Thread[] threads = new Thread[n];
 			for (int i = 0; i < n; i++) {
 				{
-					Runner runner = new Runner(dbUrl, benchmark, writer);
+					Runner runner = new Runner(dbUrl, benchmark, fetchSize, writer);
 					Thread worker = new Thread(() -> doWork(runner, duration, success));
 					worker.start();
 					threads[i] = worker;

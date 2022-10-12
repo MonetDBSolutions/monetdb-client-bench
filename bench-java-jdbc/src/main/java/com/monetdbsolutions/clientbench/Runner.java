@@ -10,10 +10,12 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Properties;
 
 public class Runner {
 	private final String dbUrl;
 	private final Benchmark benchmark;
+	private final int fetchSize;
 	private final ResultWriter writer;
 	Connection _conn = null;
 	private Statement _statement = null;
@@ -21,15 +23,18 @@ public class Runner {
 	private long count;
 	private ArrayList<ColumnKind> columns;
 
-	public Runner(String dbUrl, Benchmark benchmark, ResultWriter writer) {
+	public Runner(String dbUrl, Benchmark benchmark, int fetchSize, ResultWriter writer) {
 		this.dbUrl = dbUrl;
 		this.benchmark = benchmark;
+		this.fetchSize = fetchSize;
 		this.writer = writer;
 	}
 
 	private Connection getConnection() throws SQLException {
 		if (_conn == null) {
-			_conn = DriverManager.getConnection(dbUrl);
+			Properties props = new Properties(1);
+			props.setProperty("fetchsize", String.valueOf(fetchSize));
+			_conn = DriverManager.getConnection(dbUrl, props);
 		}
 		return _conn;
 	}
