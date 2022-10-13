@@ -1,2 +1,4 @@
+/.vscode/
 /bench-java-jdbc/.idea/
 /bench-java-jdbc/target/
+/bench-python-pymonetdb/venv/
