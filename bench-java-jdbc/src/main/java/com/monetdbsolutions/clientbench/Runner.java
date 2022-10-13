@@ -120,7 +120,10 @@ public class Runner {
 			} else {
 				int type = md.getColumnType(i);
 				switch (type) {
+					case Types.TINYINT:
+					case Types.SMALLINT:
 					case Types.INTEGER:
+					case Types.BIGINT:
 						kind = ColumnKind.IntColumn;
 						break;
 					case Types.VARCHAR:
