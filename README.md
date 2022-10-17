@@ -158,7 +158,7 @@ The comments can contain special keywords:
 * @RECONNECT@ disconnect and reconnect between each query sent
 * @PARALLEL=n@ run n jobs in parallel
 * @ALL_TEXT@ retrieve fields as text regardless of the column type
-* @EXPEXTED=n@ expect n result rows
+* @EXPECTED=n@ expect n result rows
 
 For each language/library combo we have a runner program that executes and times
 the queries. There is a toplevel script `bench.py` that executes them. It knows
@@ -200,9 +200,9 @@ buffering to make sure the I/O of writing the durations does not slow it down.
 
 The toplevel runner `bench.py` is run with an `--output-dir` argument. Each
 runner should get its own output directory. Bench.py writes a metadata.txt there
-containing the version information from the runner. For each query, it also
-writes a file QUERY.csv file containing the query timings expressed in
-nanoseconds.
+containing its parameters and the version information from the runner.
+For each query, it also writes a file QUERY.csv file containing the query
+timings expressed in nanoseconds.
 
 The user is encouraged to extend metadata.txt with more information about the
 setup, for example the output of [inxi] and details of the network layout.
