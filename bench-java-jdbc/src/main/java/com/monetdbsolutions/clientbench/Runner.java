@@ -90,21 +90,22 @@ public class Runner {
 			}
 
 			Long expected = benchmark.getExpected();
-			long deadline = (long)(1000 * duration) + System.currentTimeMillis();
+			long t0 = System.nanoTime();
+			long deadline = t0 + (long)(1e9 * duration);
+			long t1;
 			do {
 				if (benchmark.alwaysReconnect()) {
 					disconnect();
 				}
-				long t0 = System.nanoTime();
 				rs = executeBenchmarkQuery();
 				long rowCount = handleResultSet(rs);
-				long t1 = System.nanoTime();
 				rs.close();
 				if (expected != null && rowCount != expected) {
 					throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + rowCount);
 				}
+				t1 = System.nanoTime();
 				submitter.submit(t1 - t0);
-			} while (System.currentTimeMillis() < deadline);
+			} while (t1 < deadline);
 			// deter optimizer
 			getStatement().execute("SELECT " + count);
 		}

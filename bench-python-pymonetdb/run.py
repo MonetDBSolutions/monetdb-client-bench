@@ -65,14 +65,13 @@ def run_benchmark(db_url, query_file, duration):
     # Run the query
     cursor = conn.cursor()
     deadline = time.time() + duration if duration > 0 else 0
+    t0 = time.time()
     while time.time() < deadline:
-        t0 = time.time()
         cursor.execute(query)
-        # t1 = time.time()
         process_resultset(cursor, checkers)
-        t2 = time.time()
-        d = t2 - t0
-        print(d, flush=False)
+        t1 = time.time()
+        elapsed = int(1e9 * (t1 - t0))
+        print(elapsed, flush=False)
 
     cursor.close()
     conn.close()

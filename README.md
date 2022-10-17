@@ -185,10 +185,18 @@ If only the database url is given, or no parameter at all, it should print some
 metadata including the language version, the library version and if the url was
 given, the MonetDB version.
 
-The runner should produce on standard out the durations in nanoseconds. The
-actual precision may be less, but the duration must be expressed in nanoseconds.
-Note that the one-row queries run very quickly, the runner should try to make
-sure that writing the durations does not slow it down.
+The runner first runs the query once for warmup and to determine the column types
+in the result set. Then it sets its internal clock to 0.0 and starts running the query
+and processing the result repeatedly, until time runs out. After each query it prints
+the elapsed time since the start of its run in nanoseconds. 
+
+This means that from the output of the runner we can quickly see exactly how long it
+ran (maximum of the samples) and how often it managed to run the query (count of the
+samples). By computing the difference with the previous sample we can also compute
+more advanced statistics on the query times.
+
+Note that the one-row queries run very quickly, the runner should use appropriate
+buffering to make sure the I/O of writing the durations does not slow it down.
 
 The toplevel runner `bench.py` is run with an `--output-dir` argument. Each
 runner should get its own output directory. Bench.py writes a metadata.txt there
