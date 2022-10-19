@@ -173,14 +173,18 @@ if not os.path.isdir(output_dir):
     os.mkdir(output_dir)
 
 metadata_file = os.path.join(output_dir, 'metadata.txt')
-metadata = run_runner()
+metadata = f"""\
+Fetch size: {args.reply_size}
+Duration: {args.duration}
+"""
+metadata += run_runner()
 print(metadata)
 if os.path.exists(metadata_file):
     existing_content = open(metadata_file).read()
     if metadata not in existing_content:
         print('\n'
               f'ERROR: Content of {metadata_file} does not seem to match {args.runner}:\n'
-              f'{metadata}',
+              f'{existing_content}',
               file=sys.stderr)
         sys.exit(1)
 else:
