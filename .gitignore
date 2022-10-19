@@ -1,4 +1,9 @@
 /.vscode/
+
 /bench-java-jdbc/.idea/
 /bench-java-jdbc/target/
+
 /bench-python-pymonetdb/venv/
+
+/bench-c-libmapi/runner
+/bench-c-libmapi/*.o

@@ -64,7 +64,7 @@ class DBSpec:
         if explicit_port and not port:
             port = 50000
         if port:
-            netloc += ':{port}'
+            netloc += f':{port}'
 
         path = f'/{self.database}'
 
@@ -97,19 +97,23 @@ class DBSpec:
                              default_password='monetdb')
 
 
-def pymonetdb_runner(u):
+def pymonetdb_runner(u: DBSpec):
     return ['python3', 'run.py', u.for_python()]
 
 
-def jdbc_runner(u):
+def jdbc_runner(u: DBSpec):
     version = '1.0-SNAPSHOT'
     jarname = f'bench-java-jdbc-{version}-jar-with-dependencies.jar'
-    return ['java', '-jar', join(HERE, 'target', jarname), u.for_jdbc()]
+    return ['java', '-jar', join('target', jarname), u.for_jdbc()]
 
+
+def mapi_runner(u: DBSpec):
+    return ['./runner', u.for_libmapi()]
 
 KNOWN_RUNNERS = {
     'bench-python-pymonetdb': pymonetdb_runner,
     'bench-java-jdbc': jdbc_runner,
+    'bench-c-libmapi': mapi_runner,
 }
 
 
@@ -135,7 +139,7 @@ argparser.add_argument('queries', nargs='*')
 
 
 args = argparser.parse_args()
-print(args)
+# print(args)
 
 queries = args.queries
 if not queries:
