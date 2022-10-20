@@ -58,12 +58,13 @@ public class Main {
 
 		AtomicBoolean success = new AtomicBoolean(true);
 		try (ResultWriter writer = new ResultWriter(System.out)) {
+			Experiment experiment = new Experiment(dbUrl, benchmark, fetchSize, duration, writer);
 			int n = benchmark.getParallelism();
 			Thread[] threads = new Thread[n];
 			for (int i = 0; i < n; i++) {
 				{
-					Runner runner = new Runner(dbUrl, benchmark, fetchSize, writer);
-					Thread worker = new Thread(() -> doWork(runner, duration, success));
+					Runner runner = new Runner(experiment);
+					Thread worker = new Thread(() -> doWork(runner, success));
 					worker.start();
 					threads[i] = worker;
 				}
@@ -76,9 +77,9 @@ public class Main {
 		System.exit(success.get() ? 0 : 1);
 	}
 
-	private static void doWork(Runner runner, double duration, AtomicBoolean success) {
+	private static void doWork(Runner runner, AtomicBoolean success) {
 		try {
-			runner.run(duration);
+			runner.run();
 		} catch (Exception e) {
 			success.set(false);
 			e.printStackTrace();
