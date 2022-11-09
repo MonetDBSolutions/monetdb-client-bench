@@ -14,6 +14,7 @@ COUNT = 0
 
 WRITE_LOCK = Lock()
 
+
 def connect_to(db_url, fetch_size):
     conn = pymonetdb.connect(db_url, autocommit=True)
     conn.set_replysize(fetch_size)
@@ -105,6 +106,9 @@ class ResultProcessor:
     def clone(self):
         return ResultProcessor(self.benchmark, self.type_codes)
 
+    def clear(self):
+        self.count = 0
+
     def process_int(self, i):
         if i == 42:
             self.count += 1
@@ -162,21 +166,25 @@ def start_worker(db_url, benchmark, processor, fetch_size, duration):
     return t
 
 
-def run_queries(db_url, benchmark, processor, fetch_size, duration):
+def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, fetch_size, duration):
+    text = benchmark.text
     out = io.StringIO()
     try:
-        conn = connect_to(db_url, fetch_size)
-        cursor = conn.cursor()
-
+        conn = None
+        cursor = None
         t0 = time.time()
         deadline = t0 + duration
         while True:
-            if benchmark.reconnect:
+            if benchmark.reconnect and cursor:
                 cursor.close()
                 conn.close()
+                conn = None
+                cursor = None
+            if not cursor:
                 conn = connect_to(db_url, fetch_size)
                 cursor = conn.cursor()
-            cursor.execute(benchmark.text)
+            processor.clear()
+            cursor.execute(text)
             processor.process(cursor)
             t1 = time.time()
             elapsed = int(1e9 * (t1 - t0))
@@ -192,7 +200,6 @@ def run_queries(db_url, benchmark, processor, fetch_size, duration):
     finally:
         with WRITE_LOCK:
             print(out.getvalue(), flush=True, end='')
-
 
 
 if __name__ == "__main__":
