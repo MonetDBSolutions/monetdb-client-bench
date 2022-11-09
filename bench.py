@@ -112,6 +112,7 @@ def mapi_runner(u: DBSpec):
 
 KNOWN_RUNNERS = {
     'bench-python-pymonetdb': pymonetdb_runner,
+    'bench-python-binary': pymonetdb_runner,
     'bench-java-jdbc': jdbc_runner,
     'bench-c-libmapi': mapi_runner,
 }
