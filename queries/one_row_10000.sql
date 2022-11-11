@@ -1,5 +1,4 @@
 
--- @PREPARE@
 -- @EXPECTED=1@
 
 SELECT
