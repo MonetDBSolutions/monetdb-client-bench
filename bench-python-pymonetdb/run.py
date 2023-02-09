@@ -60,25 +60,6 @@ class Benchmark:
                 raise Exception(f"Invalid keyword {m.group(0)}")
 
 
-TEXT_TYPES = set([
-    types.CHAR,
-    types.VARCHAR,
-    types.CLOB,
-])
-
-INTEGER_TYPES = set([
-    types.TINYINT,
-    types.SMALLINT,
-    types.INT,
-    types.BIGINT,
-    types.HUGEINT,
-    types.SERIAL,
-    types.SHORTINT,
-    types.MEDIUMINT,
-    types.LONGINT,
-])
-
-
 class ResultProcessor:
     count = 0
 
@@ -93,13 +74,13 @@ class ResultProcessor:
         self.type_codes = type_codes
         self.checkers = []
         for name, type_code in type_codes:
-            if benchmark.all_text or type_code in TEXT_TYPES:
+            if benchmark.all_text:
                 checker = self.process_str
-            elif type_code in INTEGER_TYPES:
-                checker = self.process_int
             else:
-                raise Exception(
-                    f"Cannot handle column {name} of type {type_code!r}")
+                checker = self.TYPE_MAP.get(type_code)
+                if not checker:
+                    raise Exception(
+                        f"Cannot handle column {name} of type {type_code!r}")
             self.checkers.append(checker)
 
     def clone(self):
@@ -107,14 +88,6 @@ class ResultProcessor:
 
     def clear(self):
         self.count = 0
-
-    def process_int(self, i):
-        if i == 42:
-            self.count += 1
-
-    def process_str(self, i):
-        if len(i) > 4:
-            self.count += 1
 
     def process(self, cursor):
         rowcount = 0
@@ -126,12 +99,36 @@ class ResultProcessor:
                 rowcount += 1
                 for field, checker in zip(row, self.checkers):
                     if field is not None:
-                        checker(field)
+                        checker(self, field)
                     else:
                         self.count += 1
         expected = self.benchmark.expected
         if expected is not None and rowcount != expected:
             raise Exception(f"Expected row count {expected}, got {rowcount}")
+
+    def process_int(self, i):
+        if i == 42:
+            self.count += 1
+
+    def process_str(self, i):
+        if len(i) > 4:
+            self.count += 1
+
+    TYPE_MAP = {
+        types.TINYINT: process_int,
+        types.SMALLINT: process_int,
+        types.INT: process_int,
+        types.BIGINT: process_int,
+        types.HUGEINT: process_int,
+        types.SERIAL: process_int,
+        types.SHORTINT: process_int,
+        types.MEDIUMINT: process_int,
+        types.LONGINT: process_int,
+        #
+        types.CHAR: process_str,
+        types.VARCHAR: process_str,
+        types.CLOB: process_str,
+    }
 
 
 def run_benchmark(db_url, query_file, duration):
