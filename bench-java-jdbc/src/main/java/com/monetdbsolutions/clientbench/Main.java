@@ -18,18 +18,14 @@ public class Main {
 		String dbUrl = null;
 		String queryFile = null;
 		Double durationArg = null;
-		Integer fetchSizeArg = null;
 
 		switch (args.length) {
 			default:
 				System.err.println("Usage: bench-java-jdbc DB_URL QUERY_FILE FETCH_SIZE DURATION_SECONDS");
 				System.exit(1);
 				return;
-			case 4:
-				durationArg = Double.parseDouble(args[3]);
-				/* fallthrough */
 			case 3:
-				fetchSizeArg = Integer.parseInt(args[2]);
+				durationArg = Double.parseDouble(args[2]);
 				/* fallthrough */
 			case 2:
 				queryFile = args[1];
@@ -53,12 +49,11 @@ public class Main {
 
 		// If we get here, all parameters have been given
 		Benchmark benchmark = new Benchmark(Path.of(queryFile));
-		final int fetchSize = fetchSizeArg;
 		final double duration = durationArg;
 
 		AtomicBoolean success = new AtomicBoolean(true);
 		try (ResultWriter writer = new ResultWriter(System.out)) {
-			Experiment experiment = new Experiment(dbUrl, benchmark, fetchSize, duration, writer);
+			Experiment experiment = new Experiment(dbUrl, benchmark, duration, writer);
 			int n = benchmark.getParallelism();
 			Thread[] threads = new Thread[n];
 			for (int i = 0; i < n; i++) {

@@ -15,9 +15,8 @@ COUNT = 0
 WRITE_LOCK = Lock()
 
 
-def connect_to(db_url, fetch_size):
+def connect_to(db_url):
     conn = pymonetdb.connect(db_url, autocommit=True)
-    conn.set_replysize(fetch_size)
     return conn
 
 
@@ -26,7 +25,7 @@ def show_info(dburl=None):
     print("pymonetdb path:", pymonetdb.__path__)
     print("pymonetdb version:", pymonetdb.__version__)
     if dburl:
-        conn = connect_to(dburl, 100)
+        conn = connect_to(dburl)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT value FROM sys.environment WHERE name = 'monet_version'")
@@ -135,12 +134,12 @@ class ResultProcessor:
             raise Exception(f"Expected row count {expected}, got {rowcount}")
 
 
-def run_benchmark(db_url, query_file, fetch_size, duration):
+def run_benchmark(db_url, query_file, duration):
     with open(query_file) as f:
         benchmark = Benchmark(f.read())
 
     # Warmup and retrieve metadata
-    conn = connect_to(db_url, fetch_size)
+    conn = connect_to(db_url)
     cursor = conn.cursor()
     cursor.execute(benchmark.text)
     processor = ResultProcessor(benchmark, [], cursor=cursor)
@@ -152,21 +151,21 @@ def run_benchmark(db_url, query_file, fetch_size, duration):
 
     threads = []
     for i in range(benchmark.parallel):
-        thread = start_worker(
-            db_url, benchmark, processor.clone(), fetch_size, duration)
+        thread = start_worker(db_url, benchmark, processor.clone(), duration)
         threads.append(thread)
     for thread in threads:
         thread.join()
 
 
-def start_worker(db_url, benchmark, processor, fetch_size, duration):
-    t = Thread(daemon=True, target=lambda: run_queries(
-        db_url, benchmark, processor, fetch_size, duration))
+def start_worker(db_url, benchmark, processor, duration):
+    t = Thread(
+            daemon=True, 
+            target=lambda: run_queries(db_url, benchmark, processor, duration))
     t.start()
     return t
 
 
-def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, fetch_size, duration):
+def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, duration):
     text = benchmark.text
     out = io.StringIO()
     try:
@@ -181,7 +180,7 @@ def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, fetch_
                 conn = None
                 cursor = None
             if not cursor:
-                conn = connect_to(db_url, fetch_size)
+                conn = connect_to(db_url)
                 cursor = conn.cursor()
             processor.clear()
             cursor.execute(text)
@@ -208,7 +207,7 @@ if __name__ == "__main__":
             print(msg, file=sys.stderr)
         print("Usage: run.py", file=sys.stderr)
         print("   or: run.py DBURL", file=sys.stderr)
-        print("   or: run.py DBURL QUERY_FILE FETCH_SIZE DURATION", file=sys.stderr)
+        print("   or: run.py DBURL QUERY_FILE DURATION", file=sys.stderr)
         sys.exit(1)
     argcount = len(sys.argv)
     if argcount == 1:
@@ -217,18 +216,14 @@ if __name__ == "__main__":
     elif argcount == 2:
         show_info(sys.argv[1])
         sys.exit(0)
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) == 4:
         db_url = sys.argv[1]
         query_file = sys.argv[2]
         try:
-            fetch_size = int(sys.argv[3])
-        except ValueError:
-            usage("Error: invalid fetch_size")
-        try:
-            duration = float(sys.argv[4])
+            duration = float(sys.argv[3])
         except ValueError:
             usage("Error: invalid duration")
     else:
         usage()
 
-    run_benchmark(db_url, query_file, fetch_size, duration)
+    run_benchmark(db_url, query_file, duration)

@@ -9,7 +9,7 @@
 
 void die_errno(const char *msg);
 
-void connect_to(char *url, int fetch_size);
+void connect_to(char *url);
 Mapi connect_to_db(void);
 void abort_on_error(Mapi mapi, MapiHdl handle);
 int advance_row(MapiHdl handle);

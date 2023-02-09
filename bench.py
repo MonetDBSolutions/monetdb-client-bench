@@ -130,7 +130,6 @@ argparser.add_argument('-o', '--output-dir', required=True)
 argparser.add_argument('-r', '--runner', required=True, type=runner_name,
                        choices=KNOWN_RUNNERS.keys(),
                        help='Runner to invoke',)
-argparser.add_argument('-s', '--reply-size', type=int, required=True)
 argparser.add_argument('--overwrite', action='store_true',
                        help='Overwrite existing results instead of skipping them')
 argparser.add_argument('-t', '--duration', type=float, required=True,
@@ -178,7 +177,6 @@ if not os.path.isdir(output_dir):
 
 metadata_file = os.path.join(output_dir, 'metadata.txt')
 metadata = f"""\
-Fetch size: {args.reply_size}
 Duration: {args.duration}
 """
 metadata += run_runner()
@@ -211,7 +209,7 @@ for qf in queries:
         continue
 
     qf_rel = os.path.relpath(qf, start=runner_dir)
-    data = run_runner(qf_rel, args.reply_size, args.duration)
+    data = run_runner(qf_rel, args.duration)
     with open(csv_file, 'w') as f:
         f.write(data)
     print(f'    {len(data.splitlines())} measurements')

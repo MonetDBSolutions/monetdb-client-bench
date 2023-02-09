@@ -8,23 +8,20 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.text.MessageFormat;
-import java.util.Properties;
 
 public class Experiment {
 	private final String dbUrl;
 	private final Benchmark benchmark;
-	private final int fetchSize;
 	private final ResultWriter writer;
 	private final ColumnKind[] columns;
 	private final long startTimeNanos;
 	private final long deadlineNanos;
 
-	public Experiment(String dbUrl, Benchmark benchmark, int fetchSize, double duration, ResultWriter writer) throws SQLException {
+	public Experiment(String dbUrl, Benchmark benchmark, double duration, ResultWriter writer) throws SQLException {
 		this.dbUrl = dbUrl;
 		this.benchmark = benchmark;
-		this.fetchSize = fetchSize;
 		this.writer = writer;
-		try (Connection conn = connect(1); Statement stmt = conn.createStatement()) {
+		try (Connection conn = connect(); Statement stmt = conn.createStatement()) {
 			ResultSet rs = stmt.executeQuery(benchmark.getQuery());
 			this.columns = extractColumnKinds(benchmark, rs);
 			rs.close();
@@ -63,13 +60,7 @@ public class Experiment {
 	}
 
 	Connection connect() throws SQLException {
-		return connect(this.fetchSize);
-	}
-
-	Connection connect(int fetchSize) throws SQLException {
-		Properties props = new Properties(1);
-		props.setProperty("fetchsize", String.valueOf(fetchSize));
-		return DriverManager.getConnection(dbUrl, props);
+		return DriverManager.getConnection(dbUrl);
 	}
 
 	public boolean deadlineExpired(long currentTimeNanos) {

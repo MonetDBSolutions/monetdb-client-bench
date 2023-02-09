@@ -21,7 +21,6 @@ main(int argc, char *argv[])
 {
 	char *db_url = NULL;
 	char *query_file = NULL;
-	long fetch_size = 100;
 	double duration;
 	bool do_run = false;
 	char *remainder;
@@ -31,16 +30,11 @@ main(int argc, char *argv[])
 	switch (argc) {
 		default:
 			return usage(NULL);
-		case 5:
+		case 4:
 			do_run = true;
-			duration = strtod(argv[4], &remainder);
+			duration = strtod(argv[3], &remainder);
 			if (remainder == argv[4])
 				return usage("invalid duration");
-			/* fallthrough */
-		case 4:
-			fetch_size = strtol(argv[3], &remainder, 10);
-			if (remainder == argv[3])
-				return usage("invalid fetch size");
 			/* fallthrough */
 		case 3:
 			query_file = argv[2];
@@ -53,7 +47,7 @@ main(int argc, char *argv[])
 	}
 
 	if (argc > 1)
-		connect_to(db_url, fetch_size);
+		connect_to(db_url);
 
 	if (!do_run) {
 		if (argc > 2)

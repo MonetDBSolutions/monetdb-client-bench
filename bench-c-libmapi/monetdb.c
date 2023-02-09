@@ -8,10 +8,8 @@
 
 static struct {
 	char *db_url;
-	int fetch_size;
 } target_db = {
 	.db_url = NULL,
-	.fetch_size = -1,
  };
 
 
@@ -24,10 +22,9 @@ die_errno(const char *msg)
 
 
 void
-connect_to(char *url, int fetch_size)
+connect_to(char *url)
 {
 	target_db.db_url = url;
-	target_db.fetch_size = fetch_size;
 }
 
 
@@ -37,7 +34,6 @@ connect_to_db(void)
 	// TODO fix hardcoded credentials
 	Mapi conn = mapi_mapiuri(target_db.db_url, "monetdb", "monetdb", "sql");
 	abort_on_error(conn, NULL);
-	mapi_cache_limit(conn, target_db.fetch_size);
 	abort_on_error(conn, NULL);
 	mapi_reconnect(conn);
 	abort_on_error(conn, NULL);
