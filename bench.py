@@ -12,6 +12,8 @@ from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 import pymonetdb
 
+BENCHMARK_VERSION = "0.2.0pre1"
+
 HERE = os.path.dirname(sys.argv[0])
 
 
@@ -110,6 +112,7 @@ def jdbc_runner(u: DBSpec):
 def mapi_runner(u: DBSpec):
     return ['./runner', u.for_libmapi()]
 
+
 KNOWN_RUNNERS = {
     'bench-python-pymonetdb': pymonetdb_runner,
     'bench-java-jdbc': jdbc_runner,
@@ -135,6 +138,15 @@ argparser.add_argument('--overwrite', action='store_true',
 argparser.add_argument('-t', '--duration', type=float, required=True,
                        help='how long to run the runner, in seconds')
 argparser.add_argument('queries', nargs='*')
+
+
+try:
+    git_cmd = ['git', 'describe',
+               '--all', '--always', '--dirty=-modified', '--match=v*']
+    output = subprocess.check_output(git_cmd, cwd=HERE, encoding='us-ascii')
+    git_rev = output.splitlines()[0].strip().removeprefix('tags/')
+except (subprocess.CalledProcessError, FileNotFoundError):
+    git_rev = 'not available'
 
 
 args = argparser.parse_args()
@@ -177,6 +189,8 @@ if not os.path.isdir(output_dir):
 
 metadata_file = os.path.join(output_dir, 'metadata.txt')
 metadata = f"""\
+Benchmark version: {BENCHMARK_VERSION}
+Benchmark git revision: {git_rev}
 Duration: {args.duration}
 """
 metadata += run_runner()
