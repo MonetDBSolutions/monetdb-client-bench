@@ -1,13 +1,12 @@
 MonetDB Client Benchmark
 ========================
 
-Benchmark thhe MonetDB client libraries, in particular [pymonetdb],
+Benchmark for the MonetDB client libraries, in particular [pymonetdb],
 [monetdb-jdbc] and [libmapi]. Maybe also [odbc]. The embedded versions
 [monetdbe-python] and [monetdbe-java] might also be interesting.
 
 The tests focus on result set retrieval for various combinations of row count,
-column count and data types, but future version will also test frequent
-reconnects and include file transfers.
+column count and data types, but future version may also include file transfers.
 
 [pymonetdb]: https://www.monetdb.org/documentation/user-guide/client-interfaces/libraries-drivers/python-library/
 
@@ -34,7 +33,6 @@ About client side processing
 ----------------------------
 
 We need to be careful with the amount of processing required on the client side.
-
 With a language like Python, if we require the client to do too much processing
 we are no longer measuring pymonetdb performance but only Python performance. On
 the other hand, with a compiled language if we do too little processing the
@@ -47,124 +45,121 @@ With this in mind we require the client to
 
 2. retrieve the full result set,
 
-3. extracting every field in every column as the relevant type, unless the test
-   is explicitly marked as string-only,
+3. extract every field in every column as the relevant type, unless the test
+   is explicitly marked as strings-only,
 
-4. and count the number of 42's in integer columns and the number of strings
-   with length larger than 4 in a textual columns, plus all NULLs.
+4. apply a type-specific test to the extracted value according to the table below
+
+5. count the number of fields which are either NULL or where the condition is true.
 
 All text will be US ASCII.
 
-All scripting must be done in Python so that in the future we can be reasonably
-portable to Windows.
+Conditions to count:
 
-
-About host- and network configuration
--------------------------------------
-
-The benchmarks can be run on small and big machines. Also, the benchmarks can be
-run with everything on localhost, or with client and server on separate systems.
-The latter case excludes the MonetDB/e variants, unless we run them in their
-experimental remote mode.
-
-If run on separate systems, we have many choices for network bandwidth and
-latency and often it will be hard to determine what we even have.
-Some cases:
-
-1. Client and server on localhost.
-
-2. Client and server on separate on a fast data center LAN.
-
-3. Client and server side by side on whatever our cloud provider happens to
-   offer today.
-
-4. Client and server separated by the Internet. This is the Cumulus scenario
-   with the client a Jupyter notebook on a laptop and the server somewhere in
-   the cloud.
-
-5. Many other scenarios.
-
-> I am completely and utterly undecided on what to pick here.
-> For the time being testing on localhost and on the company LAN is probably
-> sufficient.
+| TYPE           | CONDITION                                             |
+| -------------- | ----------------------------------------------------- |
+| TINYINT        | value equals 42                                       |
+| SMALLINT       | value equals 42                                       |
+| INT            | value equals 42                                       |
+| BIGINT         | value equals 42                                       |
+| HUGEINT        | value equals 42                                       |
+| SERIAL         | value equals 42                                       |
+| SHORTINT       | value equals 42                                       |
+| MEDIUMINT      | value equals 42                                       |
+| LONGINT        | value equals 42                                       |
+| REAL           | value equals 42                                       |
+| DOUBLE         | value equals 42                                       |
+| DECIMAL        | value equals 42                                       |
+| TEXT / VARCHAR | length of value greater than 4                        |
+| BOOLEAN        | value is TRUE                                         |
+| UUID           | value equals 12345678-1234-5678-1234-567812345678     |
+| BLOB           | length of value greater than 4                        |
+| DATE           | day component equals 14                               |
+| TIME           | minute component equals 42                            |
+| TIMETZ         | minute component equals 42                            |
+| TIMESTAMP      | minute component equals 42                            |
+| TIMESTAMPTZ    | minute component equals 42                            |
+| SEC_INTERVAL   | length in seconds > 42                                |
+| DAY_INTERVAL   | value equals 42                                       |
+| MONTH_INTERVAL | value equals 42                                       |
 
 
 Test cases
-----------
+==========
 
-By default the server splits a result set into chunks which the client requests
-on demand. This is useful if the client at some point decides it doesn't need
-the rest of the result set anymore. This can be configured using a setting often
-called reply size or fetch size. Most benchmarks should be run with multiple
-settings:
+We have roughly three classes of tests.
 
-1. the default reply size,
-2. 1000,
-3. 10_000 and
-4. infinite reply size.
+- Tests that contain many rows
+- Tests that contain a single row but with various numbers of columns
+- Reconnect tests which disconnect after each query.
 
-* [tall_text.sql](./queries/tall_text.sql): a table with a large number of rows
-  and a moderate number of VARCHAR/TEXT columns. A limited number of items is
-  NULL.
+The test queries can be found in the queries/ directory, one per file. The
+comments can contain special keywords:
 
-* [tall_int.sql](./queries/tall_int.sql): a table with a large number of rows
-  and a moderate number of integer columns. A limited number of items is NULL.
+| KEYWORD       | MEANING                                                |
+| ----          | ----                                                   |
+| @PREPARE@     | use a prepared statement, if available                 |
+| @RECONNECT@   | disconnect and reconnect between each query sent       |
+| @PARALLEL=n@  | run n jobs in parallel                                 |
+| @ALL_TEXT@    | retrieve fields as text regardless of the column type  |
+| @EXPECTED=n@  | expect n result rows                                   |
 
-* [tall_int_as_text.sql](./queries/tall_int_as_text.sql): the same table as
-  [tall_int.sql](./queries/tall_int.sql) but retrieving the data as text without
-  conversion. For comparison with [tall_int.sql](./queries/tall_int.sql).
-  Interesting when we switch to a binary protocol.
+For each language/library combo we have a runner program that executes and times
+the queries, see below.
 
-> Not sure if its interesting to separately test the various integer widths.
-> Also not sure if we should include DECIMAL here. How do the various client
-> library standards even deal with decimals?
+Tall test cases
+---------------
 
-> For the time being I'd like to keep the exotic types such as the temporals,
-> uuid's, json, etc. out of this. Unless someone specifically expresses interest
-> in one of these.
+The tests with names of the form `tall_bigint.sql`, `tall_boolean.sql`, etc.,
+test result sets with 10 columns and 100_000 rows of the given type.
+Some rows are NULL.
 
-> In Java [tall_int_as_text.sql](./queries/tall_int_as_text.sql) can be
-> implemented by calling `ResultSet.getString` rather than `ResultSet.getInt`.
-> Not sure how it can be done in Python and libmapi.
+We can use these tests to compare the performance of certain types within a
+given client library, for example compare the performance of ints and decimals,
+or we can compare different clients for a given type.
 
-* [very_tall_text.sql](./queries/very_tall_text.sql) and
-  [very_tall_int.sql](./queries/very_tall_int.sql): like their tall cousins but
-  with more rows to see if the processing time grows linearly with the number of
-  rows.
+Test `tall_int_as_text.sql` is a result set of integers to be extracted as
+strings. For example in Java that would mean calling `resultSet.getString()`
+instead of `resultSet.getInt()`. These tests are interesting with the binary
+protocol: without binary, we expect extracting as text to be faster, with binary
+we expect extracting integers to be faster.
 
-* [wide_text.sql](./queries/wide_text.sql) and
-  [wide_int.sql](./queries/wide_int.sql): twice the number of columns to see
-  if the processing time grows linearly with the number of columns.
+Not all client libraries support this, for example pymonetdb currently
+unconditionally converts integer columns to `int`.  Conversely, libmapi
+only supports extracting as text so the application has to do the conversions.
 
-* [one_row_100.sql](./queries/one_row_100.sql),
-[one_row_1000.sql](./queries/one_row_1000.sql) and
-[one_row_10000.sql](./queries/one_row_10000.sql): a single-row query, possibly
-as a prepared statement, with a large number of columns and repeated a large
-number of times on a single connection.
+There's also `very_tall_int.sql` and `very_tall_text.sql`.  These have 5× the
+number of rows and can be used to determine if the duration scales linearly with
+the number of rows.
 
-* [reconnect.sql](./queries/reconnect.sql): measure how long it takes to set up
-  a new connection and execute `SELECT 42` on it. Also separately, how long it
-  takes to close the connection afterward. Probably have to run this test with
-  1, 2, 4 and 8 threads.
+Finally, `wide_int.sql` and `wide_text.sql` have 2× the number of columns and
+can be used if the duration scales linearly with the number of columns.
 
 
-Query runners
--------------
+One-row test cases
+------------------
 
-The queries can be found in the queries/ directory, one per file.
-The comments can contain special keywords:
+The one-row tests have names like `one_row_prep_1000.sql`. They test result sets
+containing a single row 100, 1000 and 10_000 columns. With the `_prep_` tests,
+the client is supposed to use a prepared statement api if that is available.
 
-* @PREPARE@ use a prepared statement, if available
-* @RECONNECT@ disconnect and reconnect between each query sent
-* @PARALLEL=n@ run n jobs in parallel
-* @ALL_TEXT@ retrieve fields as text regardless of the column type
-* @EXPECTED=n@ expect n result rows
+
+Reconnect tests
+---------------
+
+The reconnect tests `reconnect1.sql`, `reconnect2.sql`, `reconnect4.sql`,
+and `reconnect8.sql` perform the query `SELECT 42` and then hang up. We test
+this with 1, 2, 4 and 8 worker threads.
+
+
+Test runners
+============
 
 For each language/library combo we have a runner program that executes and times
 the queries. There is a toplevel script `bench.py` that executes them. It knows
 how to invoke the runners, for example prepend `java -jar` for Java programs and
 `python3` for Python programs, and it can also translate between bare database
-names, libmapi-style MAPI URLs, JDBC URLs, Pymonetdb-style MAPI URLs, etc.
+names, libmapi-style MAPI URLs, JDBC URLs and Pymonetdb-style MAPI URLs.
 
 The runners live in directories with names of the form
 `bench-<language>-<clientlibrary>`. The toplevel script is not responsible for
@@ -177,18 +172,17 @@ The runner program is invoked with the following parameters:
 * The URL of the database to connect to, in the appropriate URL dialect.
 * The name of the query file. The runner should look for the keywords described
   above and exit if it finds any @KEYWORD@ that it doesn't recognize.
-* The reply size, -1 for infinite
-* The duration in seconds to run the test for. Repeat the query until the
-  duration has expired.
+* How long to run the test, in seconds as a floating point value. The runner
+  should repeat the query until the duration has expired.
 
-If only the database url is given, or no parameter at all, it should print some
-metadata including the language version, the library version and if the url was
-given, the MonetDB version.
+If only the database url is given, or no parameter at all, a runner should print
+some metadata including the language version, the library version and if the url
+was given, the MonetDB version.
 
-The runner first runs the query once for warmup and to determine the column types
-in the result set. Then it sets its internal clock to 0.0 and starts running the query
-and processing the result repeatedly, until time runs out. After each query it prints
-the elapsed time since the start of its run in nanoseconds. 
+The runner first runs the query once for warmup and to determine the column
+types in the result set. Then it sets its internal clock to 0.0 and starts
+running the query repeatedly until time runs out. After each query it prints the
+elapsed time since the start of its run in nanoseconds.
 
 This means that from the output of the runner we can quickly see exactly how long it
 ran (maximum of the samples) and how often it managed to run the query (count of the
@@ -199,17 +193,20 @@ Note that the one-row queries run very quickly, the runner should use appropriat
 buffering to make sure the I/O of writing the durations does not slow it down.
 
 The toplevel runner `bench.py` is run with an `--output-dir` argument. Each
-runner should get its own output directory. Bench.py writes a metadata.txt there
-containing its parameters and the version information from the runner.
-For each query, it also writes a file QUERY.csv file containing the query
-timings expressed in nanoseconds.
+runner should get its own output directory. Before starting, `bench.py` writes a
+metadata.txt there containing its parameters and the version information from
+the runner. If metadata.txt already exists and with different contents the run
+is aborted.
 
 The user is encouraged to extend metadata.txt with more information about the
 setup, for example the output of [inxi] and details of the network layout.
 
 [inxi]: https://github.com/smxi/inxi
 
+For each query, `bench.py` runs the specified runner and writes the query
+timings to a file QUERY.csv in the output directory.  If that file already
+exists the query is skipped unless `--overwrite` is given.
 
-TODO explain how to actually run a full experiment
-
-TODO explain how to analyze the results
+It also creates or updates a file summary.txt with information from all CSV
+files in the directory. When generating summary.txt it always uses all CSV
+files, not just the ones that were generated during this run.
