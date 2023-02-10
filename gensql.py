@@ -45,7 +45,7 @@ gen("double", "CAST(i AS DOUBLE)")
 gen("decimal", "CAST(i AS DEC(8,3))")
 
 gen("boolean", "i % 2 = 0")
-gen("text", "'xyz' || i")
+gen("text", "CAST('xyz' || i AS VARCHAR(20))")
 gen("uuid", "CAST('12345678-1234-5678-1234-567812345678' AS UUID)")
 gen("blob", "CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)")
 
