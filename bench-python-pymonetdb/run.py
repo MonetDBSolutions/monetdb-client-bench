@@ -83,13 +83,10 @@ class ResultProcessor:
         self.type_codes = type_codes
         self.checkers = []
         for name, type_code in type_codes:
-            if benchmark.all_text:
-                checker = self.process_str
-            else:
-                checker = self.TYPE_MAP.get(type_code)
-                if not checker:
-                    raise Exception(
-                        f"Cannot handle column {name} of type {type_code!r}")
+            checker = self.TYPE_MAP.get(type_code)
+            if not checker:
+                raise Exception(
+                    f"Cannot handle column {name} of type {type_code!r}")
             self.checkers.append(checker)
 
     def clone(self):
@@ -197,6 +194,10 @@ def run_benchmark(db_url, query_file, duration):
     conn.close()
 
     if duration is None:
+        return
+
+    if benchmark.all_text:
+        # cannot run this correctly
         return
 
     threads = []

@@ -247,11 +247,18 @@ with redirect_stdout(io.StringIO()) as summary:
     print('"name","count","total_seconds","mean_seconds"')
     for csv_file in sorted(glob(os.path.join(output_dir, '*.csv'))):
         name = os.path.splitext(os.path.basename(csv_file))[0]
-        content_nanos = numpy.loadtxt(csv_file, 'f', ndmin=1)
-        content = content_nanos / 1e9
-        count = len(content)
-        total_seconds = content.max()
-        mean_seconds = total_seconds / count if count > 0 else None
+        lines = open(csv_file).readlines()
+        if lines:
+            content_nanos = numpy.loadtxt(csv_file, 'f', ndmin=1)
+            content = content_nanos / 1e9
+            count = len(content)
+            total_seconds = content.max()
+            mean_seconds = total_seconds / count if count > 0 else None
+        else:
+            content = numpy.empty((0,), 'f')
+            count = 0
+            total_seconds = 0
+            mean_seconds = 0
         print(f'"{name}",{count},{total_seconds},{mean_seconds}')
 
 with open(output_path('summary.xxx', 'txt'), 'w') as f:
