@@ -47,7 +47,7 @@ class Benchmark:
 
     def __init__(self, text):
         self.text = text
-        for m in re.finditer("@([A-Za-z0-9]+)(?:=([0-9]+))?@", text):
+        for m in re.finditer("@([A-Z_a-z0-9]+)(?:=([0-9]+))?@", text):
             name = m.group(1)
             value = m.group(2)
             if name == "PREPARE":
@@ -185,7 +185,8 @@ class ResultProcessor:
 
 def run_benchmark(db_url, query_file, duration):
     with open(query_file) as f:
-        benchmark = Benchmark(f.read())
+        query_text = f.read()
+        benchmark = Benchmark(query_text)
 
     # Warmup and retrieve metadata
     conn = connect_to(db_url)
