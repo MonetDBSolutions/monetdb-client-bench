@@ -46,7 +46,7 @@ gen("decimal", "CAST(i AS DEC(8,3))")
 
 gen("boolean", "i % 2 = 0")
 gen("text", "CAST('xyz' || i AS VARCHAR(20))")
-gen("uuid", "CAST('12345678-1234-5678-1234-567812345678' AS UUID)")
+gen("uuid", "CASE WHEN i IS NULL THEN NULL ELSE CAST('12345678-1234-5678-1234-567812345678' AS UUID) END")
 gen("blob", "CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)")
 
 gen("date", "CAST(NOW AS DATE) + i * INTERVAL '1' DAY")

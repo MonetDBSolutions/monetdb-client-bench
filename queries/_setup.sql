@@ -22,7 +22,7 @@ CREATE TABLE tall AS SELECT
     , CAST(i AS DEC(8,3))                                 AS decimal_col
     , i % 2 = 0                                           AS boolean_col
     , CAST('xyz' || i AS VARCHAR(20))                     AS text_col
-    , CAST('12345678-1234-5678-1234-567812345678' AS UUID)  AS uuid_col
+    , CASE WHEN i IS NULL THEN NULL ELSE CAST('12345678-1234-5678-1234-567812345678' AS UUID) END  AS uuid_col
     , CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)  AS blob_col
     , CAST(NOW AS DATE) + i * INTERVAL '1' DAY            AS date_col
     , CAST(NOW AS TIME) + i * INTERVAL '1' MINUTE         AS time_col
