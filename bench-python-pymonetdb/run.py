@@ -41,7 +41,9 @@ class Benchmark:
     reconnect = False
     parallel = 1
     all_text = False
-    expected = Optional[int]
+    expected: Optional[int] = None
+    null_count: Optional[int] = None
+    hit_count: Optional[int] = None
 
     def __init__(self, text):
         self.text = text
@@ -58,12 +60,17 @@ class Benchmark:
                 self.all_text = True
             elif name == "EXPECTED":
                 self.expected = int(value)
+            elif name == "NULLCOUNT":
+                self.null_count = int(value)
+            elif name == "HITCOUNT":
+                self.hit_count = int(value)
             else:
                 raise Exception(f"Invalid keyword {m.group(0)}")
 
 
 class ResultProcessor:
-    count = 0
+    null_count = 0
+    hit_count = 0
 
     def __init__(self, benchmark: Benchmark, type_codes, cursor=None):
         self.benchmark = benchmark
@@ -89,7 +96,8 @@ class ResultProcessor:
         return ResultProcessor(self.benchmark, self.type_codes)
 
     def clear(self):
-        self.count = 0
+        self.null_count = 0
+        self.hit_count = 0
 
     def process(self, cursor):
         rowcount = 0
@@ -103,40 +111,44 @@ class ResultProcessor:
                     if field is not None:
                         checker(self, field)
                     else:
-                        self.count += 1
-        expected = self.benchmark.expected
-        if expected is not None and rowcount != expected:
-            raise Exception(f"Expected row count {expected}, got {rowcount}")
+                        self.null_count += 1
+        bench = self.benchmark
+        if bench.expected is not None and rowcount != bench.expected:
+            raise Exception(f"Expected row count {bench.expected}, got {rowcount}")
+        if bench.hit_count is not None and self.hit_count != bench.hit_count:
+            raise Exception(f"Expected hit count {bench.hit_count}, got {self.hit_count}")
+        if bench.null_count is not None and self.null_count != bench.null_count:
+            raise Exception(f"Expected null count {bench.null_count}, got {self.null_count}")
 
     def process_num(self, i):
         if i == 42:
-            self.count += 1
+            self.hit_count += 1
 
     def process_str(self, i):
         if len(i) > 4:
-            self.count += 1
+            self.hit_count += 1
 
     def process_bool(self, b):
         if b:
-            self.count += 1
+            self.hit_count += 1
 
     def process_day(self, d: date):
         if d.day == 14:
-            self.count += 1
+            self.hit_count += 1
 
     def process_minute(self, t):
         if t.minute == 42:
-            self.count += 1
+            self.hit_count += 1
 
     def process_timedelta(self, d: timedelta):
         if d.total_seconds() > 42:
-            self.count += 1
+            self.hit_count += 1
 
     reference_uuid = UUID('12345678-1234-5678-1234-567812345678')
 
     def process_uuid(self, u: UUID):
         if u == self.reference_uuid:
-            self.count += 1
+            self.hit_count += 1
 
     TYPE_MAP = {
         types.TINYINT: process_num,
