@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 
+# This script has become a bit of a beast.
+# That's the nature of this sort of thing.
+
+
 import argparse
+from contextlib import redirect_stdout
 from glob import glob
+import io
+import numpy
 import os
 from os.path import join
 import re
@@ -234,3 +241,18 @@ for qf in queries:
     with open(csv_file, 'w') as f:
         f.write(data)
     print(f'    {len(data.splitlines())} measurements')
+
+# generate a new summary
+with redirect_stdout(io.StringIO()) as summary:
+    print('"name","count","total_seconds","mean_seconds"')
+    for csv_file in sorted(glob(os.path.join(output_dir, '*.csv'))):
+        name = os.path.splitext(os.path.basename(csv_file))[0]
+        content_nanos = numpy.loadtxt(csv_file, 'f', ndmin=1)
+        content = content_nanos / 1e9
+        count = len(content)
+        total_seconds = content.max()
+        mean_seconds = total_seconds / count if count > 0 else None
+        print(f'"{name}",{count},{total_seconds},{mean_seconds}')
+
+with open(output_path('summary.xxx', 'txt'), 'w') as f:
+    f.write(summary.getvalue())
