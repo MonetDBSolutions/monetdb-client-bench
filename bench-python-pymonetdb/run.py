@@ -12,7 +12,7 @@ from uuid import UUID
 import pymonetdb
 from pymonetdb import types
 
-COUNT = 0
+ERROR_COUNT = 0
 
 WRITE_LOCK = Lock()
 
@@ -231,36 +231,46 @@ def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, durati
         cursor.close()
         conn.close()
     except:
-        traceback.print_exc()
+        with WRITE_LOCK:
+            traceback.print_exc()
+            global ERROR_COUNT
+            ERROR_COUNT += 1
         sys.exit(1)
     finally:
         with WRITE_LOCK:
             print(out.getvalue(), flush=True, end='')
 
 
-if __name__ == "__main__":
-    def usage(msg=None):
-        if msg:
-            print(msg, file=sys.stderr)
-        print("Usage: run.py", file=sys.stderr)
-        print("   or: run.py DBURL", file=sys.stderr)
-        print("   or: run.py DBURL QUERY_FILE DURATION", file=sys.stderr)
-        sys.exit(1)
-    argcount = len(sys.argv)
+def usage(msg=None):
+    if msg:
+        print(msg, file=sys.stderr)
+    print("Usage: run.py", file=sys.stderr)
+    print("   or: run.py DBURL", file=sys.stderr)
+    print("   or: run.py DBURL QUERY_FILE DURATION", file=sys.stderr)
+    sys.exit(1)
+
+def main(args):
+    argcount = len(args)
     if argcount == 1:
         show_info()
         sys.exit(0)
     elif argcount == 2:
-        show_info(sys.argv[1])
+        show_info(args[1])
         sys.exit(0)
-    elif len(sys.argv) == 4:
-        db_url = sys.argv[1]
-        query_file = sys.argv[2]
+    elif len(args) == 4:
+        db_url = args[1]
+        query_file = args[2]
         try:
-            duration = float(sys.argv[3])
+            duration = float(args[3])
         except ValueError:
             usage("Error: invalid duration")
     else:
         usage()
 
     run_benchmark(db_url, query_file, duration)
+
+
+if __name__ == "__main__":
+    main(sys.argv)
+    if ERROR_COUNT > 0:
+        sys.exit(1)
