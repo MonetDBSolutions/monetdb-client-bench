@@ -1,17 +1,15 @@
--- Result set with 10 varchar columns
+-- Result set with 10 int columns
 -- @EXPECTED=100000@
 
 SELECT
-	i AS col0,
-	i AS col1,
-	i AS col2,
-	i AS col3,
-	i AS col4,
-	i AS col5,
-	i AS col6,
-	i AS col7,
-	i AS col8,
-	i AS col9
+	int_col AS col0,
+	int_col AS col1,
+	int_col AS col2,
+	int_col AS col3,
+	int_col AS col4,
+	int_col AS col5,
+	int_col AS col6,
+	int_col AS col7,
+	int_col AS col8,
+	int_col AS col9
 FROM tall;
-
-

@@ -1,4 +1,4 @@
--- Result set with 10 varchar columns
+-- Result set with 20 int columns
 -- @EXPECTED=100000@
 
 SELECT

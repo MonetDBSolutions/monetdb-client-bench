@@ -1,27 +1,27 @@
--- Result set with 10 varchar columns
+-- Result set with 20 varchar columns
 -- @EXPECTED=100000@
 
 SELECT
-	t AS col00,
-	t AS col01,
-	t AS col02,
-	t AS col03,
-	t AS col04,
-	t AS col05,
-	t AS col06,
-	t AS col07,
-	t AS col08,
-	t AS col09,
-	t AS col10,
-	t AS col11,
-	t AS col12,
-	t AS col13,
-	t AS col14,
-	t AS col15,
-	t AS col16,
-	t AS col17,
-	t AS col18,
-	t AS col19
+	text_col AS col00,
+	text_col AS col01,
+	text_col AS col02,
+	text_col AS col03,
+	text_col AS col04,
+	text_col AS col05,
+	text_col AS col06,
+	text_col AS col07,
+	text_col AS col08,
+	text_col AS col09,
+	text_col AS col10,
+	text_col AS col11,
+	text_col AS col12,
+	text_col AS col13,
+	text_col AS col14,
+	text_col AS col15,
+	text_col AS col16,
+	text_col AS col17,
+	text_col AS col18,
+	text_col AS col19
 FROM tall;
 
 

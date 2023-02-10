@@ -165,7 +165,14 @@ def run_runner(*additional_args):
     cmd = KNOWN_RUNNERS[args.runner](spec) + [str(a) for a in additional_args]
     visual = shlex.join(cmd)
     print('    RUNNING', visual)
-    output = subprocess.check_output(cmd, cwd=runner_dir, encoding='us-ascii')
+    try:
+        output = subprocess.check_output(cmd, cwd=runner_dir, encoding='us-ascii')
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        # in general exiting here instead of raising the exception is a bad
+        # idea but in this case we do it anyway because it leads to much better
+        # error output when this script fails.
+        print()
+        sys.exit(f"{e}")
     return output
 
 

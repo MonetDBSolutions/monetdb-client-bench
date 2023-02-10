@@ -1,6 +1,4 @@
-
 -- @EXPECTED=1@
-
 SELECT
     v AS col00001,
     v AS col00002,

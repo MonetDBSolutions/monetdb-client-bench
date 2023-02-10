@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import date, timedelta
 import io
 import re
 import sys
@@ -7,6 +8,7 @@ from threading import Lock, Thread
 import time
 import traceback
 from typing import Optional
+from uuid import UUID
 import pymonetdb
 from pymonetdb import types
 
@@ -106,7 +108,7 @@ class ResultProcessor:
         if expected is not None and rowcount != expected:
             raise Exception(f"Expected row count {expected}, got {rowcount}")
 
-    def process_int(self, i):
+    def process_num(self, i):
         if i == 42:
             self.count += 1
 
@@ -114,16 +116,54 @@ class ResultProcessor:
         if len(i) > 4:
             self.count += 1
 
+    def process_bool(self, b):
+        if b:
+            self.count += 1
+
+    def process_day(self, d: date):
+        if d.day == 14:
+            self.count += 1
+
+    def process_minute(self, t):
+        if t.minute == 42:
+            self.count += 1
+
+    def process_timedelta(self, d: timedelta):
+        if d.total_seconds() > 42:
+            self.count += 1
+
+    reference_uuid = UUID('12345678-1234-5678-1234-567812345678')
+
+    def process_uuid(self, u: UUID):
+        if u == self.reference_uuid:
+            self.count += 1
+
     TYPE_MAP = {
-        types.TINYINT: process_int,
-        types.SMALLINT: process_int,
-        types.INT: process_int,
-        types.BIGINT: process_int,
-        types.HUGEINT: process_int,
-        types.SERIAL: process_int,
-        types.SHORTINT: process_int,
-        types.MEDIUMINT: process_int,
-        types.LONGINT: process_int,
+        types.TINYINT: process_num,
+        types.SMALLINT: process_num,
+        types.INT: process_num,
+        types.BIGINT: process_num,
+        types.HUGEINT: process_num,
+        types.SERIAL: process_num,
+        types.SHORTINT: process_num,
+        types.MEDIUMINT: process_num,
+        types.LONGINT: process_num,
+        types.REAL: process_num,
+        types.DOUBLE: process_num,
+        #
+        types.DECIMAL: process_num,
+        types.BOOLEAN: process_bool,
+        types.UUID: process_uuid,
+        types.BLOB: process_str,
+        #
+        types.DATE: process_day,
+        types.TIME: process_minute,
+        types.TIMETZ: process_minute,
+        types.TIMESTAMP: process_minute,
+        types.TIMESTAMPTZ: process_minute,
+        types.SEC_INTERVAL: process_timedelta,
+        types.DAY_INTERVAL: process_num,
+        types.MONTH_INTERVAL: process_num,
         #
         types.CHAR: process_str,
         types.VARCHAR: process_str,
@@ -156,8 +196,8 @@ def run_benchmark(db_url, query_file, duration):
 
 def start_worker(db_url, benchmark, processor, duration):
     t = Thread(
-            daemon=True, 
-            target=lambda: run_queries(db_url, benchmark, processor, duration))
+        daemon=True,
+        target=lambda: run_queries(db_url, benchmark, processor, duration))
     t.start()
     return t
 

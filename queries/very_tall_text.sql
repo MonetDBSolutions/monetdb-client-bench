@@ -2,16 +2,16 @@
 -- @EXPECTED=500000@
 
 SELECT
-	t AS col0,
-	t AS col1,
-	t AS col2,
-	t AS col3,
-	t AS col4,
-	t AS col5,
-	t AS col6,
-	t AS col7,
-	t AS col8,
-	t AS col9
+	text_col AS col0,
+	text_col AS col1,
+	text_col AS col2,
+	text_col AS col3,
+	text_col AS col4,
+	text_col AS col5,
+	text_col AS col6,
+	text_col AS col7,
+	text_col AS col8,
+	text_col AS col9
 FROM very_tall;
 
 
