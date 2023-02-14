@@ -1,5 +1,5 @@
 -- Result set with 10 blob columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=346150@
 
 SELECT
 	blob_col AS col0,

@@ -1,5 +1,5 @@
 -- Result set with 10 date columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=30310@
 
 SELECT
 	date_col AS col0,

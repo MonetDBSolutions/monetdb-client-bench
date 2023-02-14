@@ -1,5 +1,5 @@
 -- Result set with 10 boolean columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=461520@
 
 SELECT
 	boolean_col AS col0,

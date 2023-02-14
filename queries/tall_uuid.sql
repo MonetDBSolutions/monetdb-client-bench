@@ -1,5 +1,5 @@
 -- Result set with 10 uuid columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=923050@
 
 SELECT
 	uuid_col AS col0,

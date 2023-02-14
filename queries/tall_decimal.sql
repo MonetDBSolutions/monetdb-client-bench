@@ -1,5 +1,5 @@
 -- Result set with 10 decimal columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=10@
 
 SELECT
 	decimal_col AS col0,

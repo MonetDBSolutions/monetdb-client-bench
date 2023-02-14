@@ -1,5 +1,5 @@
 -- Result set with 20 int columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=153900@ @HITCOUNT=20@
 
 SELECT
 	i AS col00,

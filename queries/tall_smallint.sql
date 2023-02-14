@@ -1,5 +1,5 @@
 -- Result set with 10 smallint columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=90@
 
 SELECT
 	smallint_col AS col0,

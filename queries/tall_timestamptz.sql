@@ -1,5 +1,5 @@
 -- Result set with 10 timestamptz columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=15370@
 
 SELECT
 	timestamptz_col AS col0,

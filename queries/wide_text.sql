@@ -1,5 +1,5 @@
 -- Result set with 20 varchar columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=153900@ @HITCOUNT=1845940@
 
 SELECT
 	text_col AS col00,

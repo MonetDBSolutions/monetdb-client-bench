@@ -1,5 +1,5 @@
 -- Result set with 10 sec columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=922670@
 
 SELECT
 	sec_col AS col0,

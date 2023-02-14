@@ -24,11 +24,11 @@ CREATE TABLE tall AS SELECT
     , CAST('xyz' || i AS VARCHAR(20))                     AS text_col
     , CASE WHEN i IS NULL THEN NULL ELSE CAST('12345678-1234-5678-1234-567812345678' AS UUID) END  AS uuid_col
     , CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)  AS blob_col
-    , CAST(NOW AS DATE) + i * INTERVAL '1' DAY            AS date_col
-    , CAST(NOW AS TIME) + i * INTERVAL '1' MINUTE         AS time_col
-    , CAST(NOW AS TIMETZ) + i * INTERVAL '1' MINUTE       AS timetz_col
-    , CAST(NOW AS TIMESTAMP) + i * INTERVAL '1' MINUTE    AS timestamp_col
-    , CAST(NOW AS TIMESTAMPTZ) + i * INTERVAL '1' MINUTE  AS timestamptz_col
+    , DATE '2015-02-14' + i * INTERVAL '1' DAY            AS date_col
+    , TIME '20:50:55' + i * INTERVAL '1' MINUTE           AS time_col
+    , TIMETZ '20:50:55+01:00' + i * INTERVAL '1' MINUTE   AS timetz_col
+    , TIMESTAMP '2015-02-14 20:50:55' + i * INTERVAL '1' MINUTE  AS timestamp_col
+    , TIMESTAMPTZ '2015-02-14 20:50:55+01:00' + i * INTERVAL '1' MINUTE  AS timestamptz_col
     , i * INTERVAL '1' MONTH                              AS month_col
     , i * INTERVAL '1' SECOND                             AS sec_col
     , i * INTERVAL '1' DAY                                AS day_col

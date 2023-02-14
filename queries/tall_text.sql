@@ -1,5 +1,5 @@
 -- Result set with 10 text columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=922970@
 
 SELECT
 	text_col AS col0,

@@ -1,5 +1,5 @@
 -- Result set with 10 tinyint columns
--- @EXPECTED=100000@
+-- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=9250@
 
 SELECT
 	tinyint_col AS col0,
