@@ -156,7 +156,14 @@ except (subprocess.CalledProcessError, FileNotFoundError):
     git_rev = 'not available'
 
 
-args = argparser.parse_args()
+if '--' in sys.argv:
+    idx = sys.argv.index('--')
+    our_args = sys.argv[1:idx]
+    TOOL_ARGS = sys.argv[idx+1:]
+else:
+    our_args = sys.argv[1:]
+    TOOL_ARGS = []
+args = argparser.parse_args(our_args)
 # print(args)
 
 queries = args.queries
@@ -169,7 +176,7 @@ runner_dir = os.path.join(HERE, args.runner)
 
 
 def run_runner(*additional_args):
-    cmd = KNOWN_RUNNERS[args.runner](spec) + [str(a) for a in additional_args]
+    cmd = KNOWN_RUNNERS[args.runner](spec) + [*TOOL_ARGS] + [str(a) for a in additional_args]
     visual = shlex.join(cmd)
     print('    RUNNING', visual)
     try:
