@@ -39,6 +39,7 @@ def show_info(dburl, fetch_mode):
             "SELECT value FROM sys.environment WHERE name = 'monet_version'")
         version = cursor.fetchone()[0]
         print("MonetDB version: " + version)
+        print("DB URL: " + dburl)
     if fetch_mode == "one":
         mode = "fetchone()"
     elif fetch_mode == "all":
