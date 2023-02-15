@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 from datetime import date, timedelta
 import io
 import re
@@ -7,7 +8,7 @@ import sys
 from threading import Lock, Thread
 import time
 import traceback
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 import pymonetdb
 from pymonetdb import types
@@ -22,10 +23,15 @@ def connect_to(db_url):
     return conn
 
 
-def show_info(dburl=None):
+def tweak_fetch_mode(fetch_mode, cursor):
+    if cursor.arraysize == 0 and fetch_mode is None:
+        return 100
+
+
+def show_info(dburl, fetch_mode):
     print("Python version:", sys.version)
-    print("pymonetdb path:", pymonetdb.__path__)
     print("pymonetdb version:", pymonetdb.__version__)
+    print("pymonetdb path:", pymonetdb.__path__)
     if dburl:
         conn = connect_to(dburl)
         cursor = conn.cursor()
@@ -33,6 +39,21 @@ def show_info(dburl=None):
             "SELECT value FROM sys.environment WHERE name = 'monet_version'")
         version = cursor.fetchone()[0]
         print("MonetDB version: " + version)
+    if fetch_mode == "one":
+        mode = "fetchone()"
+    elif fetch_mode == "all":
+        mode = "fetchall()"
+    elif fetch_mode is None:
+        mode = "fetchmany()"
+    else:
+        mode = f"fetchmany({fetch_mode})"
+    print(f"Fetch mode: {mode}")
+
+    if cursor and cursor.arraysize == 0 and fetch_mode is None:
+        print(
+            "Warning: this fetch mode probably doesn't work with this version of pymonetdb")
+        cursor.close()
+        conn.close()
 
 
 class Benchmark:
@@ -41,12 +62,14 @@ class Benchmark:
     reconnect = False
     parallel = 1
     all_text = False
+    fetch_mode: Optional[Union[int, str]]
     expected: Optional[int] = None
     null_count: Optional[int] = None
     hit_count: Optional[int] = None
 
-    def __init__(self, text):
+    def __init__(self, text: str, fetch_mode: Optional[Union[int, str]]):
         self.text = text
+        self.fetch_mode = fetch_mode
         for m in re.finditer("@([A-Z_a-z0-9]+)(?:=([0-9]+))?@", text):
             name = m.group(1)
             value = m.group(2)
@@ -97,21 +120,41 @@ class ResultProcessor:
         self.hit_count = 0
 
     def process(self, cursor):
+        bench = self.benchmark
         rowcount = 0
-        while True:
-            rows = cursor.fetchmany(1000)
-            if not rows:
-                break
-            for row in rows:
+        if bench.fetch_mode == 'one':
+            while True:
+                row = cursor.fetchone()
+                if not row:
+                    break
                 rowcount += 1
                 for field, checker in zip(row, self.checkers):
                     if field is not None:
                         checker(self, field)
                     else:
                         self.null_count += 1
-        bench = self.benchmark
+        else:
+            while True:
+                if bench.fetch_mode == 'all':
+                    rows = cursor.fetchall()
+                else:
+                    rows = cursor.fetchmany(bench.fetch_mode)
+                if not rows:
+                    break
+                for row in rows:
+                    rowcount += 1
+                    for field, checker in zip(row, self.checkers):
+                        if field is not None:
+                            checker(self, field)
+                        else:
+                            self.null_count += 1
+
         if bench.expected is not None and rowcount != bench.expected:
-            raise Exception(f"Expected row count {bench.expected}, got {rowcount}")
+            if rowcount == 0 and cursor.arraysize == 0:
+                msg = ". Try passing one of --fetch-one, --fetch-many or --fetch-all "
+            else:
+                msg = ""
+            raise Exception(f"Expected row count {bench.expected}, got {rowcount}{msg}")
         if bench.hit_count is not None and self.hit_count != bench.hit_count:
             raise Exception(f"Expected hit count {bench.hit_count}, got {self.hit_count}")
         if bench.null_count is not None and self.null_count != bench.null_count:
@@ -180,11 +223,7 @@ class ResultProcessor:
     }
 
 
-def run_benchmark(db_url, query_file, duration):
-    with open(query_file) as f:
-        query_text = f.read()
-        benchmark = Benchmark(query_text)
-
+def run_benchmark(db_url: str, benchmark: Benchmark, duration: Optional[float]):
     # Warmup and retrieve metadata
     conn = connect_to(db_url)
     cursor = conn.cursor()
@@ -255,36 +294,37 @@ def run_queries(db_url, benchmark: Benchmark, processor: ResultProcessor, durati
             print(out.getvalue(), flush=True, end='')
 
 
-def usage(msg=None):
-    if msg:
-        print(msg, file=sys.stderr)
-    print("Usage: run.py", file=sys.stderr)
-    print("   or: run.py DBURL", file=sys.stderr)
-    print("   or: run.py DBURL QUERY_FILE DURATION", file=sys.stderr)
-    sys.exit(1)
+argparser = argparse.ArgumentParser()
+argparser.add_argument('db_url', nargs='?')
+argparser.add_argument('query_file', nargs='?', type=argparse.FileType(
+    mode='r', encoding='us-ascii'))
+argparser.add_argument('duration', nargs='?', type=float)
+mode_parser = argparser.add_mutually_exclusive_group()
+mode_parser.add_argument('--fetch-one', action='store_true')
+mode_parser.add_argument('--fetch-many', nargs='?', type=int)
+mode_parser.add_argument('--fetch-all', action='store_true')
+
 
 def main(args):
-    argcount = len(args)
-    if argcount == 1:
-        show_info()
-        sys.exit(0)
-    elif argcount == 2:
-        show_info(args[1])
-        sys.exit(0)
-    elif len(args) == 4:
-        db_url = args[1]
-        query_file = args[2]
-        try:
-            duration = float(args[3])
-        except ValueError:
-            usage("Error: invalid duration")
-    else:
-        usage()
+    if args.query_file is not None and args.duration is None:
+        sys.exit("Please pass both QUERY_FILE and DURATION")
 
-    run_benchmark(db_url, query_file, duration)
+    if args.fetch_one:
+        fetch_mode = 'one'
+    elif args.fetch_all:
+        fetch_mode = 'all'
+    else:
+        fetch_mode = args.fetch_many
+
+    if args.duration is None:
+        show_info(args.db_url, fetch_mode)
+    else:
+        benchmark = Benchmark(args.query_file.read(), fetch_mode)
+        run_benchmark(args.db_url, benchmark, args.duration)
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    args = argparser.parse_args()
+    main(args)
     if ERROR_COUNT > 0:
         sys.exit(1)
