@@ -176,7 +176,7 @@ runner_dir = os.path.join(HERE, args.runner)
 
 
 def run_runner(*additional_args):
-    cmd = KNOWN_RUNNERS[args.runner](spec) + [*TOOL_ARGS] + [str(a) for a in additional_args]
+    cmd = KNOWN_RUNNERS[args.runner](spec) + [str(a) for a in additional_args] + [*TOOL_ARGS]
     visual = shlex.join(cmd)
     print('    RUNNING', visual)
     try:
@@ -213,6 +213,7 @@ metadata = f"""\
 Benchmark version: {BENCHMARK_VERSION}
 Benchmark git revision: {git_rev}
 Duration: {args.duration}
+Additional arguments: {shlex.join(TOOL_ARGS)}
 """
 metadata += run_runner()
 print(metadata)
