@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.text.MessageFormat;
 
 public class Experiment {
@@ -39,19 +38,74 @@ public class Experiment {
 			if (benchmark.alwaysText()) {
 				kind = ColumnKind.StringColumn;
 			} else {
-				int type = md.getColumnType(i + 1);
+				String type = md.getColumnTypeName(i + 1);
 				switch (type) {
-					case Types.TINYINT:
-					case Types.SMALLINT:
-					case Types.INTEGER:
-					case Types.BIGINT:
-						kind = ColumnKind.IntColumn;
+					case "int":
+					case "tinyint":
+					case "smallint":
+					case "bigint":
+					case "month_interval":
+						kind = ColumnKind.IntegerColumn;
 						break;
-					case Types.VARCHAR:
+
+//					case Types.VARCHAR:
+					case "char":
+					case "varchar":
+					case "clob":
 						kind = ColumnKind.StringColumn;
 						break;
+
+					case "blob":
+						kind = ColumnKind.BlobColumn;
+						break;
+
+					case "boolean":
+						kind = ColumnKind.BoolColumn;
+						break;
+
+					case "day_interval":
+						kind = ColumnKind.IntervalDayColumn;
+						break;
+
+					case "sec_interval":
+					case "hugeint":
+					case "decimal":
+						kind = ColumnKind.DecimalColumn;
+						break;
+
+					case "date":
+						kind = ColumnKind.DateColumn;
+						break;
+
+					case "time":
+						kind = ColumnKind.TimeColumn;
+						break;
+
+					case "timetz":
+						kind = ColumnKind.TimeTzColumn;
+						break;
+
+					case "timestamp":
+						kind = ColumnKind.TimestampColumn;
+						break;
+
+					case "timestamptz":
+						kind = ColumnKind.TimestampTzColumn;
+						break;
+
+					case "real":
+					case "double":
+						kind = ColumnKind.FloatColumn;
+						break;
+
+					case "uuid":
+						kind = ColumnKind.UuidColumn;
+						break;
+
 					default:
-						throw new RuntimeException(MessageFormat.format("Column {0}({1}) has unknown type {2}", i, md.getColumnName(i), type));
+						int sqltype = md.getColumnType(i + 1);
+						String colname = md.getColumnName(i + 1);
+						throw new RuntimeException(MessageFormat.format("Column {0}({1}) has unknown type: {2}/{3}", i, colname, type, sqltype));
 				}
 			}
 			cols[i] = kind;
@@ -79,7 +133,7 @@ public class Experiment {
 		return startTimeNanos;
 	}
 
-	public ColumnKind getColumn(int i) {
+	public ColumnKind getColumnKind(int i) {
 		return columns[i];
 	}
 }

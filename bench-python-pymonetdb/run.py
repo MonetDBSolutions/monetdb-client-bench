@@ -182,7 +182,7 @@ class ResultProcessor:
             self.hit_count += 1
 
     def process_timedelta(self, d: timedelta):
-        if d.total_seconds() > 42:
+        if d.total_seconds() == 42:
             self.hit_count += 1
 
     reference_uuid = UUID('12345678-1234-5678-1234-567812345678')

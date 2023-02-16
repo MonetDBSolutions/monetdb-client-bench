@@ -8,14 +8,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Benchmark {
-	private static final Pattern keywordPattern = Pattern.compile("@([A-Za-z0-9]+)(?:=([0-9]+))?@");
+	private static final Pattern keywordPattern = Pattern.compile("@([A-Z_a-z0-9]+)(?:=([0-9]+))?@");
 	private final String query;
 	private boolean allText;
 	private boolean reconnect;
 	private boolean prepare;
 
 	private int parallelism = 1;
-	private Long expected = null;
+	private Long expectedRows = null;
+	private Long expectedNullCount = null;
+	private Long expectedHitCount = null;
 
 	public Benchmark(Path queryFile) throws IOException {
 		List<String> lines = Files.readAllLines(queryFile);
@@ -47,9 +49,23 @@ public class Benchmark {
 					break;
 				case "EXPECTED":
 					if (value != null) {
-						expected = Long.parseLong(value);
+						expectedRows = Long.parseLong(value);
 					} else {
 						throw new RuntimeException("Invalid keyword in sql query, need @EXPECTED=number@");
+					}
+					break;
+				case "NULLCOUNT":
+					if (value != null) {
+						expectedNullCount = Long.parseLong(value);
+					} else {
+						throw new RuntimeException("Invalid keyword in sql query, need @NULLCOUNT=number@");
+					}
+					break;
+				case "HITCOUNT":
+					if (value != null) {
+						expectedHitCount = Long.parseLong(value);
+					} else {
+						throw new RuntimeException("Invalid keyword in sql query, need @HITCOUNT=number@");
 					}
 					break;
 				default:
@@ -79,7 +95,15 @@ public class Benchmark {
 		return prepare;
 	}
 
-	public Long getExpected() {
-		return expected;
+	public Long getExpectedRows() {
+		return expectedRows;
+	}
+
+	public Long getExpectedNullCount() {
+		return expectedNullCount;
+	}
+
+	public Long getExpectedHitCount() {
+		return expectedHitCount;
 	}
 }

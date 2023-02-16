@@ -1,17 +1,27 @@
 package com.monetdbsolutions.clientbench;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 public class Runner {
 	private final Experiment experiment;
+	private final BigDecimal decimal42 = new BigDecimal(1L).setScale(3);
+	private final BigDecimal interval42day = new BigDecimal(42L * 24 * 3600).setScale(3);
+	private final Calendar offset1Calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+1"));
 	Connection _conn = null;
 	private Statement _statement = null;
 	private PreparedStatement _prepared = null;
-	private long count;
+	private long nullCount;
+	private long hitCount;
 
 	public Runner(Experiment experiment) {
 		this.experiment = experiment;
@@ -63,23 +73,34 @@ public class Runner {
 
 	public void run() throws SQLException {
 		try (ResultWriter.Submitter submitter = experiment.newSubmitter()) {
-			Long expected = experiment.getBenchmark().getExpected();
+			Benchmark benchmark = experiment.getBenchmark();
+			Long expectedRows = benchmark.getExpectedRows();
+			Long expectedNullCount = benchmark.getExpectedNullCount();
+			Long expectedHitCount = benchmark.getExpectedHitCount();
 			long t1;
 			do {
-				if (experiment.getBenchmark().alwaysReconnect()) {
+				if (benchmark.alwaysReconnect()) {
 					disconnect();
 				}
+				nullCount = 0;
+				hitCount = 0;
 				ResultSet rs = executeBenchmarkQuery();
 				long rowCount = handleResultSet(rs);
 				rs.close();
-				if (expected != null && rowCount != expected) {
-					throw new RuntimeException("Unexpected row count: expected " + expected + ", got " + rowCount);
+				if (expectedRows != null && rowCount != expectedRows) {
+					throw new RuntimeException("Unexpected row count: expected " + expectedRows + ", got " + rowCount);
+				}
+				if (expectedNullCount != null && nullCount != expectedNullCount) {
+					throw new RuntimeException("Unexpected null count: expected " + expectedNullCount + ", got " + nullCount);
+				}
+				if (expectedHitCount != null && hitCount != expectedHitCount) {
+					throw new RuntimeException("Unexpected hit count: expected " + expectedHitCount + ", got " + hitCount);
 				}
 				t1 = System.nanoTime();
 				submitter.submit(t1 - experiment.getStartTime());
 			} while (!experiment.deadlineExpired(t1));
 			// deter optimizer
-			getStatement().execute("SELECT " + count);
+			getStatement().execute("SELECT " + nullCount + hitCount);
 		}
 	}
 
@@ -95,18 +116,126 @@ public class Runner {
 	private void handleResultRow(ResultSet rs) throws SQLException {
 		int count = rs.getMetaData().getColumnCount();
 		for (int i = 1; i <= count; i++) {
-			ColumnKind kind = experiment.getColumn(i - 1);
+			ColumnKind kind = experiment.getColumnKind(i - 1);
 			switch (kind) {
-				case IntColumn:
-					int v = rs.getInt(i);
-					if (rs.wasNull() || v == 42)
-						this.count++;
+				case IntegerColumn:
+					long longValue = rs.getLong(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (longValue == 42) {
+						hitCount++;
+					}
 					break;
 				case StringColumn:
-					String s = rs.getString(i);
-					if (rs.wasNull() || s.length() > 4)
-						this.count++;
+					String stringValue = rs.getString(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (stringValue.length() > 4) {
+						hitCount++;
+					}
 					break;
+
+				case BlobColumn:
+					byte[] bytesValue = rs.getBytes(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (bytesValue.length > 4) {
+						hitCount++;
+					}
+					break;
+
+				case BoolColumn:
+					boolean booleanValue = rs.getBoolean(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (booleanValue) {
+						hitCount++;
+					}
+					break;
+
+				case DateColumn:
+					Date dateValue = rs.getDate(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (dateValue.toLocalDate().getDayOfMonth() == 14) {
+						hitCount++;
+					}
+					break;
+
+				case TimeColumn:
+					Time timeValue = rs.getTime(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (timeValue.toLocalTime().getMinute() == 42) {
+						hitCount++;
+					}
+					break;
+
+				case TimeTzColumn:
+					Time timeTzValue = rs.getTime(i, offset1Calendar);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (timeTzValue.toLocalTime().getMinute() == 42) {
+						hitCount++;
+					}
+					break;
+
+				case TimestampColumn:
+					Timestamp timestampValue = rs.getTimestamp(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (timestampValue.toLocalDateTime().getMinute() == 42) {
+						hitCount++;
+					}
+					break;
+
+				case TimestampTzColumn:
+					Timestamp timestampTzValue = rs.getTimestamp(i, offset1Calendar);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (timestampTzValue.toLocalDateTime().getMinute() == 42) {
+						hitCount++;
+					}
+					break;
+
+				case IntervalDayColumn:
+					BigDecimal intervalDayValue = rs.getBigDecimal(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (intervalDayValue.compareTo(interval42day) == 0) {
+						hitCount++;
+					}
+					break;
+
+				case DecimalColumn:
+					BigDecimal decimalValue = rs.getBigDecimal(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (decimalValue.compareTo(decimal42) == 0) {
+						hitCount++;
+					}
+					break;
+
+				case FloatColumn:
+					double doubleValue = rs.getDouble(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (doubleValue == 42.0) {
+						hitCount++;
+					}
+					break;
+
+				case UuidColumn:
+					String uuidValue = rs.getString(i);
+					if (rs.wasNull()) {
+						nullCount++;
+					} else if (uuidValue.equals("12345678-1234-5678-1234-567812345678")) {
+						hitCount++;
+					}
+					break;
+
+				default:
+					throw new RuntimeException("don't know how to process a " + kind);
 			}
 		}
 	}
