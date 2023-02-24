@@ -65,7 +65,7 @@ gen("timestamptz", "TIMESTAMPTZ '2015-02-14 20:50:55+01:00' + i * INTERVAL '1' M
 
 
 gen("month", "i * INTERVAL '1' MONTH", "%s = 42 * INTERVAL '1' MONTH")
-gen("sec", "i * INTERVAL '1' SECOND", "%s > 42 * INTERVAL '1' SECOND")
+gen("sec", "i * INTERVAL '1' SECOND", "%s = 42 * INTERVAL '1' SECOND")
 gen("day", "i * INTERVAL '1' DAY", "%s = 42 * INTERVAL '1' DAY")
 
 
