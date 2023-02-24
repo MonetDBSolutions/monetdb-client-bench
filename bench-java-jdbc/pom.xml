@@ -19,7 +19,7 @@
         <dependency>
             <groupId>monetdb</groupId>
             <artifactId>monetdb-jdbc</artifactId>
-            <version>3.2</version>
+            <version>3.3</version>
         </dependency>
     </dependencies>
 

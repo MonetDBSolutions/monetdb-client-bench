@@ -44,7 +44,7 @@ public class Experiment {
 					case "tinyint":
 					case "smallint":
 					case "bigint":
-					case "month_interval":
+					case "interval month":
 						kind = ColumnKind.IntegerColumn;
 						break;
 
@@ -64,10 +64,12 @@ public class Experiment {
 						break;
 
 					case "day_interval":
+					case "interval day":
 						kind = ColumnKind.IntervalDayColumn;
 						break;
 
 					case "sec_interval":
+					case "interval second":
 					case "hugeint":
 					case "decimal":
 						kind = ColumnKind.DecimalColumn;
