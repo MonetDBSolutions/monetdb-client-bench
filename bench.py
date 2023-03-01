@@ -6,6 +6,7 @@
 
 import argparse
 from contextlib import redirect_stdout
+import difflib
 from glob import glob
 import io
 import numpy
@@ -220,10 +221,11 @@ print(metadata)
 if os.path.exists(metadata_file):
     existing_content = open(metadata_file).read()
     if metadata not in existing_content:
-        print('\n'
-              f'ERROR: Content of {metadata_file} does not seem to match {args.runner}:\n'
-              f'{existing_content}',
-              file=sys.stderr)
+        metadata_lines = metadata.splitlines()
+        existing_lines = existing_content.splitlines()
+        for line in difflib.unified_diff(existing_lines, metadata_lines, metadata_file):
+                print(line.rstrip(), file=sys.stderr)
+        print(f'ERROR: Content of {metadata_file} seems to have changed, see above', file=sys.stderr)
         sys.exit(1)
 else:
     with open(metadata_file, 'w') as f:
