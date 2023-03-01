@@ -57,9 +57,6 @@ gen(
 
 
 gen("blob",
-    "CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)",
-    "LENGTH(%s) > 4")
-gen("bigblob",
     f"(SELECT b FROM blobs WHERE idx < {NBIGBLOBS} AND nr = i % (SELECT COUNT(*) FROM blobs))",
     "LENGTH(%s) > 4",
     NBIGBLOBS)

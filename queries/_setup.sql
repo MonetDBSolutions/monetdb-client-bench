@@ -66,8 +66,7 @@ CREATE TABLE tall AS SELECT
     , i % 2 = 0                                           AS boolean_col
     , CAST('xyz' || i AS VARCHAR(20))                     AS text_col
     , CASE WHEN i IS NULL THEN NULL ELSE CAST('12345678-1234-5678-1234-567812345678' AS UUID) END  AS uuid_col
-    , CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)  AS blob_col
-    , (SELECT b FROM blobs WHERE idx < 10000 AND nr = i % (SELECT COUNT(*) FROM blobs))  AS bigblob_col
+    , (SELECT b FROM blobs WHERE idx < 10000 AND nr = i % (SELECT COUNT(*) FROM blobs))  AS blob_col
     , DATE '2015-02-14' + i * INTERVAL '1' DAY            AS date_col
     , TIME '20:50:55' + i * INTERVAL '1' MINUTE           AS time_col
     , TIMETZ '20:50:55+01:00' + i * INTERVAL '1' MINUTE   AS timetz_col

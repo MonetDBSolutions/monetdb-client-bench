@@ -1,5 +1,5 @@
 -- Result set with 10 blob columns
--- @EXPECTED=100000@ @NULLCOUNT=76950@ @HITCOUNT=346150@
+-- @EXPECTED=10000@ @NULLCOUNT=7700@ @HITCOUNT=83090@
 
 SELECT
 	blob_col AS col0,
@@ -12,4 +12,5 @@ SELECT
 	blob_col AS col7,
 	blob_col AS col8,
 	blob_col AS col9
-FROM tall;
+FROM tall
+WHERE idx < 10000;
