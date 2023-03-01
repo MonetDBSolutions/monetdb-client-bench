@@ -4,8 +4,10 @@ from dataclasses import dataclass
 import dataclasses
 import difflib
 import sys
-from typing import List
+from typing import List, Optional
 import pymonetdb
+
+NBIGBLOBS = 10_000
 
 SETUP_FILE = 'queries/_setup.sql'
 TALL_FILE = 'queries/tall_%s.sql'
@@ -16,6 +18,7 @@ class ColumnDef:
     typename: str
     gensql: str
     hitsql: str
+    limit: Optional[int]
     colname: str = 'banana'
     nullcount: int = -1
     hitcount: int = -1
@@ -28,8 +31,8 @@ class ColumnDef:
 COLUMN_DEFINITIONS: List[ColumnDef] = []
 
 
-def gen(typename, gensql, hitsql):
-    coldef = ColumnDef(typename, gensql, hitsql)
+def gen(typename, gensql, hitsql, limit=None):
+    coldef = ColumnDef(typename, gensql, hitsql, limit)
     COLUMN_DEFINITIONS.append(coldef)
 
 
@@ -51,7 +54,16 @@ gen(
     "CASE WHEN i IS NULL THEN NULL ELSE CAST('12345678-1234-5678-1234-567812345678' AS UUID) END",
     "%s = UUID '12345678-1234-5678-1234-567812345678'"
 )
-gen("blob", "CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)", "LENGTH(%s) > 4")
+
+
+gen("blob",
+    "CAST(SUBSTRING('0102030405060708', 0, 2 * i % 16) AS BLOB)",
+    "LENGTH(%s) > 4")
+gen("bigblob",
+    f"(SELECT b FROM blobs WHERE idx < {NBIGBLOBS} AND nr = i % (SELECT COUNT(*) FROM blobs))",
+    "LENGTH(%s) > 4",
+    NBIGBLOBS)
+
 
 gen("date", "DATE '2015-02-14' + i * INTERVAL '1' DAY", "EXTRACT(DAY FROM %s) = 14")
 gen("time", "TIME '20:50:55' + i * INTERVAL '1' MINUTE",
@@ -124,15 +136,16 @@ def set_counts(conn: pymonetdb.Connection, setup_code: str):
         return res
 
     for coldef in COLUMN_DEFINITIONS:
-        nulls = run_query(f"SELECT COUNT(*) FROM tall WHERE {coldef.colname} IS NULL")
+        and_limit = f" AND idx < {coldef.limit}" if coldef.limit is not None else ""
+        nulls = run_query(f"SELECT COUNT(*) FROM tall WHERE {coldef.colname} IS NULL{and_limit}")
         where = coldef.hitsql % coldef.colname
-        hits = run_query(f"SELECT COUNT(*) FROM tall WHERE {where}")
+        hits = run_query(f"SELECT COUNT(*) FROM tall WHERE {where}{and_limit}")
         coldef.nullcount = nulls * 10
         coldef.hitcount = hits * 10
 
 TALL_TEMPLATE = """\
 -- Result set with 10 %(typename)s columns
--- @EXPECTED=100000@ @NULLCOUNT=%(nullcount)s@ @HITCOUNT=%(hitcount)s@
+-- @EXPECTED=%(expected)s@ @NULLCOUNT=%(nullcount)s@ @HITCOUNT=%(hitcount)s@
 
 SELECT
 	%(colname)s AS col0,
@@ -145,12 +158,17 @@ SELECT
 	%(colname)s AS col7,
 	%(colname)s AS col8,
 	%(colname)s AS col9
-FROM tall;
+FROM tall%(where_clause)s;
 """
 
 
 def gen_tall(coldef: ColumnDef) -> str:
-    return TALL_TEMPLATE % coldef
+    values = dataclasses.asdict(coldef)
+    expected = coldef.limit if coldef.limit is not None else 100_000
+    where_clause = f"\nWHERE idx < {coldef.limit}" if coldef.limit is not None else ""
+    values['expected'] = expected
+    values['where_clause'] = where_clause
+    return TALL_TEMPLATE % values
 
 
 
@@ -164,29 +182,8 @@ if __name__ == "__main__":
     set_counts(conn, setup_code)
 
     for coldef in COLUMN_DEFINITIONS:
-        sql = gen_tall(dataclasses.asdict(coldef))
+        sql = gen_tall(coldef)
         ok &= write_file(TALL_FILE % coldef.typename, sql, overwrite)
 
     if not ok:
         sys.exit(1)
-
-
-
-
-
-# def gen_tall(coldef: ColumnDef) -> str:
-
-
-
-
-
-# def gen(name, expr, colname=None):
-#     if not colname:
-#         colname = name + "_col"
-
-#     COLUMN_DEFINITIONS.append(f"    , {expr:<50}  AS {colname}")
-#     text = TEMPLATE % dict(name=name, expr=expr, colname=colname)
-#     filename = f'queries/tall_{name}.sql'
-#     # print(f"WRITE TO {filename!r}")
-#     with open(filename, 'w') as f:
-#         f.write(text)
