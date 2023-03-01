@@ -1,5 +1,8 @@
 /.vscode/
 
+venv/
+__pycache__/
+
 /bench-java-jdbc/.idea/
 /bench-java-jdbc/target/
 
