@@ -143,6 +143,8 @@ argparser.add_argument('-r', '--runner', required=True, type=runner_name,
                        help='Runner to invoke',)
 argparser.add_argument('--overwrite', action='store_true',
                        help='Overwrite existing results instead of skipping them')
+argparser.add_argument('--allow-errors', action='store_true',
+                       help='Try to continue when a runner fails')
 argparser.add_argument('-t', '--duration', type=float, required=True,
                        help='how long to run the runner, in seconds')
 argparser.add_argument('queries', nargs='*')
@@ -176,16 +178,21 @@ spec = DBSpec(args.database)
 runner_dir = os.path.join(HERE, args.runner)
 
 
-def run_runner(*additional_args):
+def run_runner(additional_args, allow_errors=False):
     cmd = KNOWN_RUNNERS[args.runner](spec) + [str(a) for a in additional_args] + [*TOOL_ARGS]
     visual = shlex.join(cmd)
     print('    RUNNING', visual)
     try:
         output = subprocess.check_output(cmd, cwd=runner_dir, encoding='us-ascii')
-    except (FileNotFoundError, subprocess.CalledProcessError) as e:
-        # in general exiting here instead of raising the exception is a bad
-        # idea but in this case we do it anyway because it leads to much better
-        # error output when this script fails.
+    except FileNotFoundError as e:
+        # exiting instead of raising an exception tends to give better error output here
+        print()
+        sys.exit(f"{e}")
+    except subprocess.CalledProcessError as e:
+        if allow_errors:
+            print("    FAILED!")
+            return None
+        # exiting instead of raising an exception tends to give better error output here
         print()
         sys.exit(f"{e}")
     return output
@@ -216,7 +223,7 @@ Benchmark git revision: {git_rev}
 Duration: {args.duration}
 Additional arguments: {shlex.join(TOOL_ARGS)}
 """
-metadata += run_runner()
+metadata += run_runner([])
 print(metadata)
 if os.path.exists(metadata_file):
     existing_content = open(metadata_file).read()
@@ -238,6 +245,7 @@ def output_path(query_file, extension):
     return path
 
 
+failures = []
 for qf in queries:
     print('QUERY', os.path.basename(qf))
 
@@ -247,10 +255,13 @@ for qf in queries:
         continue
 
     qf_rel = os.path.relpath(qf, start=runner_dir)
-    data = run_runner(qf_rel, args.duration)
-    with open(csv_file, 'w') as f:
-        f.write(data)
-    print(f'    {len(data.splitlines())} measurements')
+    data = run_runner([qf_rel, args.duration], allow_errors=args.allow_errors)
+    if data is not None:
+        with open(csv_file, 'w') as f:
+            f.write(data)
+        print(f'    {len(data.splitlines())} measurements')
+    else:
+        failures.append(os.path.basename(qf))
 
 # generate a new summary
 with redirect_stdout(io.StringIO()) as summary:
@@ -273,3 +284,9 @@ with redirect_stdout(io.StringIO()) as summary:
 
 with open(output_path('summary.xxx', 'txt'), 'w') as f:
     f.write(summary.getvalue())
+
+
+if failures:
+    print()
+    print(f"{len(failures)} runs failed: " + ", ".join(failures))
+    sys.exit(1)
