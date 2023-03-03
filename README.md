@@ -79,7 +79,7 @@ Conditions to count:
 | TIMETZ         | minute component equals 42                            |
 | TIMESTAMP      | minute component equals 42                            |
 | TIMESTAMPTZ    | minute component equals 42                            |
-| SEC_INTERVAL   | length in seconds > 42                                |
+| SEC_INTERVAL   | value equals 42                                       |
 | DAY_INTERVAL   | value equals 42                                       |
 | MONTH_INTERVAL | value equals 42                                       |
 
