@@ -32,6 +32,7 @@ def show_info(dburl, fetch_mode):
     print("Python version:", sys.version)
     print("pymonetdb version:", pymonetdb.__version__)
     print("pymonetdb path:", pymonetdb.__path__)
+    cursor = None
     if dburl:
         conn = connect_to(dburl)
         cursor = conn.cursor()
