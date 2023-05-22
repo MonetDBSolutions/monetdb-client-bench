@@ -22,7 +22,7 @@ import pymonetdb
 
 BENCHMARK_VERSION = "0.2.0pre2"
 
-HERE = os.path.dirname(sys.argv[0])
+HERE = os.path.dirname(sys.argv[0]) or "."
 
 
 # This class is a work in progress.
@@ -108,7 +108,7 @@ class DBSpec:
 
 
 def pymonetdb_runner(u: DBSpec):
-    return ['python3', 'run.py', u.for_python()]
+    return [sys.executable, 'run.py', u.for_python()]
 
 
 def jdbc_runner(u: DBSpec):
@@ -290,3 +290,5 @@ if failures:
     print()
     print(f"{len(failures)} runs failed: " + ", ".join(failures))
     sys.exit(1)
+
+
