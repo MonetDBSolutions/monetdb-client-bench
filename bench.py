@@ -16,6 +16,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 import pymonetdb
@@ -147,6 +148,8 @@ argparser.add_argument('--allow-errors', action='store_true',
                        help='Try to continue when a runner fails')
 argparser.add_argument('-t', '--duration', type=float, required=True,
                        help='how long to run the runner, in seconds')
+argparser.add_argument("-w", "--wait", type=float, default=0.0,
+                      help="number of seconds to wait before running each benchmark")
 argparser.add_argument('queries', nargs='*')
 
 
@@ -247,6 +250,13 @@ def output_path(query_file, extension):
 
 failures = []
 for qf in queries:
+    if args.wait:
+        now = time.time()
+        then = time.localtime(now + args.wait)
+        sleep_till = time.strftime("%H:%M:%S", then)
+        print(f"SLEEP {args.wait:.1f}s until {sleep_till}")
+        time.sleep(args.wait)
+
     print('QUERY', os.path.basename(qf))
 
     csv_file = output_path(qf, 'csv')
