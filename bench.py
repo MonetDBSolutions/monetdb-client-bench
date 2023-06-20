@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 import pymonetdb
 
-BENCHMARK_VERSION = "0.2.0pre2"
+BENCHMARK_VERSION = "0.2.0"
 
 HERE = os.path.dirname(sys.argv[0]) or "."
 
